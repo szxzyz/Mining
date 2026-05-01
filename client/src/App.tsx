@@ -33,23 +33,17 @@ const PageLoader = memo(function PageLoader() {
 function LoadingFallback() {
   return (
     <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0a0a]">
-      <div className="absolute w-64 h-64 bg-[#F5C542]/5 rounded-full blur-[100px]" />
-      <div className="relative flex flex-col items-center gap-6 z-10">
-        <div className="relative w-20 h-20 flex items-center justify-center">
-          <div className="absolute inset-0 rounded-full border border-[#F5C542]/20 animate-ping" />
-          <div className="absolute inset-0 rounded-full border border-[#F5C542]/10" />
-          <div className="w-full h-full rounded-full overflow-hidden border border-[#F5C542]/30 shadow-lg">
-            <img src="/btc-icon.jpg" alt="Bitcoin" className="w-full h-full object-cover" />
-          </div>
+      <div className="absolute w-72 h-72 bg-[#F5C542]/4 rounded-full blur-[120px]" />
+      <div className="relative flex flex-col items-center gap-8 z-10">
+        <div className="relative w-24 h-24 flex items-center justify-center">
+          <div className="absolute inset-0 rounded-full border border-[#F5C542]/15 animate-ping" style={{ animationDuration: '2s' }} />
+          <div className="absolute inset-[-8px] rounded-full border border-[#F5C542]/6" />
+          <img src="/axn-logo.svg" alt="AXN" className="w-full h-full" />
         </div>
-        <div className="text-center">
-          <h1 className="text-white font-black text-lg tracking-widest uppercase">Lightning Sats</h1>
-          <p className="text-[#8E8E93] text-[10px] font-semibold uppercase tracking-widest mt-1">Mine · Earn · Withdraw</p>
-        </div>
-        <div className="flex items-center gap-1.5 mt-2">
+        <div className="flex items-center gap-2">
           <div className="w-1.5 h-1.5 bg-[#F5C542] rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-          <div className="w-1.5 h-1.5 bg-[#F5C542] rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
-          <div className="w-1.5 h-1.5 bg-[#F5C542] rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
+          <div className="w-1.5 h-1.5 bg-[#F5C542]/60 rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
+          <div className="w-1.5 h-1.5 bg-[#F5C542]/30 rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
         </div>
       </div>
     </div>
@@ -387,40 +381,7 @@ function App() {
   }
 
   if (isCheckingCountry || isAuthenticating || isCheckingMembership) {
-    return (
-      <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0a0a]">
-        {/* Subtle glow */}
-        <div className="absolute w-64 h-64 bg-[#F5C542]/5 rounded-full blur-[100px]" />
-
-        <div className="relative flex flex-col items-center gap-6 z-10">
-          {/* Bitcoin icon ring */}
-          <div className="relative w-20 h-20 flex items-center justify-center">
-            <div className="absolute inset-0 rounded-full border border-[#F5C542]/20 animate-ping" />
-            <div className="absolute inset-0 rounded-full border border-[#F5C542]/10" />
-            <div className="w-full h-full rounded-full overflow-hidden border border-[#F5C542]/30 shadow-lg">
-              <img src="/btc-icon.jpg" alt="Bitcoin" className="w-full h-full object-cover" />
-            </div>
-          </div>
-
-          {/* App name */}
-          <div className="text-center">
-            <h1 className="text-white font-black text-lg tracking-widest uppercase">
-              Lightning Sats
-            </h1>
-            <p className="text-[#8E8E93] text-[10px] font-semibold uppercase tracking-widest mt-1">
-              Mine · Earn · Withdraw
-            </p>
-          </div>
-
-          {/* Loading dots */}
-          <div className="flex items-center gap-1.5 mt-2">
-            <div className="w-1.5 h-1.5 bg-[#F5C542] rounded-full animate-bounce" style={{ animationDelay: '0s' }} />
-            <div className="w-1.5 h-1.5 bg-[#F5C542] rounded-full animate-bounce" style={{ animationDelay: '0.15s' }} />
-            <div className="w-1.5 h-1.5 bg-[#F5C542] rounded-full animate-bounce" style={{ animationDelay: '0.3s' }} />
-          </div>
-        </div>
-      </div>
-    );
+    return <LoadingFallback />;
   }
 
   if (isCountryBlocked) {
