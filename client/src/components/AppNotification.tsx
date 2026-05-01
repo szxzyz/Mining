@@ -101,16 +101,24 @@ export default function AppNotification() {
   };
 
   const notificationElement = (
-    <div 
-      className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] px-4 py-3 rounded-xl shadow-2xl font-medium text-sm flex items-center gap-2 animate-slideDown max-w-[90vw]"
+    <div
+      className="fixed top-4 left-1/2 -translate-x-1/2 z-[99999] px-4 py-3 rounded-xl shadow-2xl font-medium text-sm flex items-center gap-2 max-w-[90vw]"
       style={{
-        backgroundColor: type === 'error' ? '#ef4444' : type === 'info' ? '#3b82f6' : '#F5C542',
-        color: type === 'error' || type === 'info' ? '#ffffff' : '#000000',
+        backgroundColor: '#0a0a0a',
+        border: type === 'error' ? '1px solid rgba(239,68,68,0.3)' : type === 'info' ? '1px solid rgba(148,163,184,0.2)' : '1px solid rgba(245,197,66,0.25)',
+        color: '#c8c8c8',
         animation: isVisible ? "slideDown 0.3s ease-out" : "slideUp 0.3s ease-out",
-        pointerEvents: 'auto'
+        pointerEvents: 'auto',
+        boxShadow: '0 8px 32px rgba(0,0,0,0.8)',
       }}
     >
-      <div className="flex items-center justify-center w-6 h-6 rounded-full bg-white/20 flex-shrink-0">
+      <div
+        className="flex items-center justify-center w-6 h-6 rounded-full flex-shrink-0 text-xs font-bold"
+        style={{
+          backgroundColor: type === 'error' ? 'rgba(239,68,68,0.15)' : type === 'info' ? 'rgba(148,163,184,0.1)' : 'rgba(245,197,66,0.12)',
+          color: type === 'error' ? '#f87171' : type === 'info' ? '#94a3b8' : '#F5C542',
+        }}
+      >
         {getIcon()}
       </div>
       <span className="whitespace-nowrap">{message}</span>

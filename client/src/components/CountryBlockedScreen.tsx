@@ -87,7 +87,7 @@ export default function CountryBlockedScreen() {
           transition={{ delay: 0.4 }}
           className="text-white/40 text-sm leading-relaxed mb-8 font-medium"
         >
-          Lightning Sats is currently not available in your country. Try using a VPN to access the app.
+          AXN Mining is currently not available in your country. Try using a VPN to access the app.
         </motion.p>
 
         {/* Divider with app branding */}
@@ -98,10 +98,8 @@ export default function CountryBlockedScreen() {
           className="w-full border-t border-white/5 pt-6 flex flex-col items-center gap-1"
         >
           <div className="flex items-center gap-2">
-            <div className="w-5 h-5 rounded-full overflow-hidden border border-[#F5C542]/30">
-              <img src="/btc-icon.jpg" alt="Lightning Sats" className="w-full h-full object-cover" />
-            </div>
-            <span className="text-white/20 text-[10px] font-black uppercase tracking-widest">Lightning Sats</span>
+            <img src="/axn-logo.svg" alt="AXN" className="w-5 h-5" />
+            <span className="text-white/20 text-[10px] font-black uppercase tracking-widest">AXN Mining</span>
           </div>
           <p className="text-white/10 text-[9px] uppercase tracking-widest font-semibold">Mine · Earn · Withdraw</p>
         </motion.div>

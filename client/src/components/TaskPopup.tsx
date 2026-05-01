@@ -147,7 +147,7 @@ export default function TaskPopup({ onClose }: TaskPopupProps) {
       const tgWebApp = (window as any).Telegram?.WebApp;
       const refCode = (user as any)?.referralCode || "";
       const link = `https://t.me/${botUsername}?start=${refCode}`;
-      const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent("Join me on Lightning Sats!")}`;
+      const shareUrl = `https://t.me/share/url?url=${encodeURIComponent(link)}&text=${encodeURIComponent("Join me on AXN Mining!")}`;
       if (tgWebApp?.openTelegramLink) tgWebApp.openTelegramLink(shareUrl);
       else window.open(shareUrl, "_blank");
       setShareStarted(true);

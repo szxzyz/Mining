@@ -47,7 +47,7 @@ export default function WithdrawalPopup({ open, onOpenChange, tonBalance }: With
       const res = await apiRequest("POST", "/api/withdrawals", {
         address: withdrawAddress,
         amount: parseFloat(withdrawAmount).toString(),
-        method: "SAT"
+        method: "AXN"
       });
       return res.json();
     },
@@ -81,11 +81,11 @@ export default function WithdrawalPopup({ open, onOpenChange, tonBalance }: With
   const handleWithdrawClick = () => {
     const amount = parseFloat(withdrawAmount);
     if (isNaN(amount) || amount < minWithdraw) {
-      showNotification(`Minimum withdrawal amount is ${minWithdraw} SAT`, "error");
+      showNotification(`Minimum withdrawal amount is ${minWithdraw} AXN`, "error");
       return;
     }
     if (amount > satBalance) {
-      showNotification(`Insufficient balance. Available: ${satBalance} SAT`, "error");
+      showNotification(`Insufficient balance. Available: ${satBalance} AXN`, "error");
       return;
     }
     if (!withdrawAddress.trim()) {
@@ -136,16 +136,16 @@ export default function WithdrawalPopup({ open, onOpenChange, tonBalance }: With
             </div>
 
             <div className="flex items-center justify-center px-5 py-3 border-b border-white/5">
-              <h2 className="text-white font-bold text-base">SAT Withdrawal</h2>
+              <h2 className="text-white font-bold text-base">AXN Withdrawal</h2>
             </div>
 
             <div className="px-5 py-4 space-y-4">
               <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-3 flex justify-between items-center">
                 <span className="text-white/50 text-xs font-semibold">Available Balance</span>
                 <div className="flex items-center gap-1.5">
-                  <img src="/sat-icon.png" alt="SAT" className="w-4 h-4 rounded-full object-cover" />
+                  <img src="/axn-logo.svg" alt="AXN" className="w-4 h-4" />
                   <span className="text-yellow-400 text-sm font-black tabular-nums">
-                    {satBalance.toLocaleString()} SAT
+                    {satBalance.toLocaleString()} AXN
                   </span>
                 </div>
               </div>
@@ -180,7 +180,7 @@ export default function WithdrawalPopup({ open, onOpenChange, tonBalance }: With
 
               <div className="space-y-1.5">
                 <Label className="text-white/40 text-[10px] font-black uppercase tracking-widest">
-                  Amount (SAT)
+                  Amount (AXN)
                 </Label>
                 <div className="relative">
                   <Input
@@ -202,21 +202,21 @@ export default function WithdrawalPopup({ open, onOpenChange, tonBalance }: With
               <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-4 space-y-2.5">
                 <div className="flex justify-between items-center">
                   <span className="text-white/50 text-xs font-semibold">Withdraw Fee</span>
-                  <span className="text-white text-xs font-bold">{networkFee} SAT</span>
+                  <span className="text-white text-xs font-bold">{networkFee} AXN</span>
                 </div>
                 <div className="h-[1px] bg-white/5" />
                 <div className="flex justify-between items-center">
                   <span className="text-white/50 text-xs font-semibold">Min. Withdrawal</span>
-                  <span className="text-white text-xs font-bold">{minWithdraw} SAT</span>
+                  <span className="text-white text-xs font-bold">{minWithdraw} AXN</span>
                 </div>
                 <div className="h-[1px] bg-white/5" />
                 <div className="flex justify-between items-center">
                   <span className="text-white/50 text-xs font-semibold">You Receive</span>
                   <div className="flex items-center gap-1.5">
                     <span className="text-white text-sm font-black tabular-nums">
-                      {parseInt(toReceive).toLocaleString()} SAT
+                      {parseInt(toReceive).toLocaleString()} AXN
                     </span>
-                    <img src="/sat-icon.png" alt="SAT" className="w-4 h-4 rounded-full object-cover" />
+                    <img src="/axn-logo.svg" alt="AXN" className="w-4 h-4" />
                   </div>
                 </div>
               </div>
@@ -229,7 +229,7 @@ export default function WithdrawalPopup({ open, onOpenChange, tonBalance }: With
                 {withdrawMutation.isPending ? (
                   <Loader2 className="w-4 h-4 animate-spin" />
                 ) : (
-                  "Withdraw SAT"
+                  "Withdraw AXN"
                 )}
               </Button>
 
