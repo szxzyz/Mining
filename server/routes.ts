@@ -484,7 +484,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const withdrawAmount = parseFloat(String(amount));
       
       if (withdrawAmount > satBalance) {
-        return res.status(400).json({ message: "Insufficient SAT balance" });
+        return res.status(400).json({ message: "Insufficient AXN balance" });
       }
 
       const result = await storage.createPayoutRequest(user.id, withdrawAmount.toString(), 'sat_withdraw', address);
@@ -1206,7 +1206,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
       if (parseFloat(miningState.currentMining) < minClaimAmount) {
         return res.status(400).json({ 
           success: false, 
-          message: `Minimum claim amount is ${minClaimAmount} SAT. Keep mining to reach the threshold.` 
+          message: `Minimum claim amount is ${minClaimAmount} AXN. Keep mining to reach the threshold.` 
         });
       }
 
@@ -1288,6 +1288,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
     }
   });
 
+  // Free repair (after watching an ad) — no AXN cost
+  app.post("/api/axn-mining/repair-free", authenticateTelegram, async (req: any, res) => {
+    try {
+      const user = req.user?.user;
+      if (!user) return res.status(401).json({ message: "Not authenticated" });
+      const result = await storage.repairMachineFree(user.id);
+      if (!result.success) return res.status(400).json(result);
+      res.json(result);
+    } catch (error) {
+      console.error("AXN free repair error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
   app.post("/api/axn-mining/toggle-antivirus", authenticateTelegram, async (req: any, res) => {
     try {
       const user = req.user?.user;
@@ -1297,6 +1311,20 @@ export async function registerRoutes(app: Express): Promise<Server> {
       res.json(result);
     } catch (error) {
       console.error("AXN antivirus toggle error:", error);
+      res.status(500).json({ message: "Internal server error" });
+    }
+  });
+
+  // Free antivirus activation (after watching an ad) — no AXN cost
+  app.post("/api/axn-mining/antivirus-free", authenticateTelegram, async (req: any, res) => {
+    try {
+      const user = req.user?.user;
+      if (!user) return res.status(401).json({ message: "Not authenticated" });
+      const result = await storage.activateAntivirusFree(user.id);
+      if (!result.success) return res.status(400).json(result);
+      res.json(result);
+    } catch (error) {
+      console.error("AXN free antivirus error:", error);
       res.status(500).json({ message: "Internal server error" });
     }
   });
@@ -2329,6 +2357,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
           groupMember,
           isActive,
           miningBoost: isActive ? 0.02 : 0,
+          miningLevel: (referee as any).miningLevel || 1,
         });
       }
 
@@ -9249,7 +9278,7 @@ ${walletAddress}
         await db.insert(dailyMissions).values({ userId, missionType, completed: true, claimedAt: new Date(), resetDate: todayStr });
       }
 
-      res.json({ success: true, boostRatePerHour, message: `+${boostRatePerHour} SAT/h boost applied for 24h!` });
+      res.json({ success: true, boostRatePerHour, message: `+${boostRatePerHour} AXN/h boost applied for 24h!` });
     } catch (err) {
       console.error('daily-tasks/claim error:', err);
       res.status(500).json({ error: 'Failed to claim task' });
