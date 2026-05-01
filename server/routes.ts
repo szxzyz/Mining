@@ -335,20 +335,7 @@ export async function registerRoutes(app: Express): Promise<Server> {
     });
   });
   
-  app.get("/api/auth/user", authenticateTelegram, async (req: any, res) => {
-    try {
-      const user = req.user?.user;
-      if (!user) return res.status(401).json({ message: "Not authenticated" });
-      
-      const hasBoughtBoost = await storage.hasEverBoughtBoost(user.id);
-      res.json({ 
-        ...user, 
-        planStatus: hasBoughtBoost ? 'Premium' : 'Trial' 
-      });
-    } catch (error) {
-      res.status(500).json({ message: "Internal server error" });
-    }
-  });
+  // NOTE: /api/auth/user is fully handled at line ~1606 with fresh DB fetch
 
   app.get("/api/admin/settings", authenticateAdmin, async (req, res) => {
     try {
@@ -1646,10 +1633,13 @@ export async function registerRoutes(app: Express): Promise<Server> {
       const botUsername = await getBotUsername();
       const referralLink = `https://t.me/${botUsername}?start=${user.referralCode}`;
       
+      const hasBoughtBoost = await storage.hasEverBoughtBoost(userId);
+
       res.json({
         ...user,
         friendsInvited,
-        referralLink
+        referralLink,
+        planStatus: hasBoughtBoost ? 'Premium' : 'Trial',
       });
     } catch (error) {
       console.error("Error fetching user:", error);
