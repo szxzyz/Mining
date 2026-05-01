@@ -1069,7 +1069,12 @@ export default function Home() {
 
   return (
     <Layout>
-      <Header ref={headerRef} />
+      <Header
+        ref={headerRef}
+        onMenuOpen={() => setMenuOpen(true)}
+        onInviteOpen={() => setInviteOpen(true)}
+        onWithdrawOpen={() => setWithdrawPopupOpen(true)}
+      />
 
       {/* Mining Paused Banner */}
       <AnimatePresence>
@@ -1106,10 +1111,8 @@ export default function Home() {
           </div>
         </div>
 
-        {/* Footer */}
-        <div id="footer01" className="mt-6 mb-2 text-center">
-          <p className="text-[10px] text-white/20 font-medium">© 2026 LightningSatsbot</p>
-        </div>
+        {/* Footer spacer */}
+        <div className="mt-6 mb-2" />
 
       </main>
 
@@ -1345,7 +1348,12 @@ export default function Home() {
       )}
 
       {inviteOpen && <InvitePopup onClose={() => setInviteOpen(false)} />}
-      {menuOpen && <MenuPopup onClose={() => setMenuOpen(false)} />}
+      {menuOpen && (
+        <MenuPopup
+          onClose={() => setMenuOpen(false)}
+          onOpenInvite={() => { setMenuOpen(false); setInviteOpen(true); }}
+        />
+      )}
 
       <WithdrawalPopup 
         open={withdrawPopupOpen}
