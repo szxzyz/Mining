@@ -1,7 +1,7 @@
-# CashWatch - SAT Mining & Withdrawal Platform
+# CashWatch - AXN Mining Platform
 
 ## Overview
-CashWatch is a Telegram-based earning platform where users mine Satoshi (SAT) by watching ads, completing tasks, and referring others. Users withdraw SAT directly to Bitcoin, Lightning Network, or FaucetPay wallets — no conversion step required. The platform targets a broad Telegram user base interested in Bitcoin micro-earning.
+CashWatch is a Telegram-based AXN mining platform where users mine AXN by running their machine, watching ads, completing tasks, and referring others. Users withdraw AXN through the platform. Currency is AXN throughout — no BTC/SAT references anywhere.
 
 ## User Preferences
 - Task type icons should be small and compact (w-4 h-4 with p-2.5 padding)
@@ -21,9 +21,11 @@ CashWatch is a Telegram-based earning platform where users mine Satoshi (SAT) by
 - **Stack**: React, TypeScript, Vite (frontend); Express.js, Node.js (backend); PostgreSQL with Drizzle ORM (database).
 - **Authentication**: Telegram WebApp Authentication.
 - **AXN Mining Machine**: Home page features a full AXN Mining Machine system (levels 1–25). Users start the CPU to mine AXN into a capacity buffer, then claim. Machine has independent Mining Level, Capacity Level, and CPU Level (each upgradable 1–25). Energy is required to start CPU (boolean; refill costs AXN). Health degrades when antivirus is OFF and virus attacks occur (-1 AXN + -5 health every 120s). Machine repairs cost AXN. Stored in `user_machines` table. All actions via `/api/axn-mining/*` routes.
-- **SAT Mining (legacy)**: The `balance` DB field stores AXN/SAT as integer. Old `/api/mining/state` route still exists but UI uses only the new AXN Mining Machine panel.
+- **Currency**: AXN is the ONLY currency throughout. No BTC, SAT, Satoshi, or Lightning Sats references anywhere in the UI.
+- **Branding**: App uses AXN logo (public/axn-logo.svg) — futuristic, no text, no Bitcoin symbol. Loading screen shows only the logo + bouncing dots, no app name text.
+- **Notification UI**: Black background (#0a0a0a), silver/light gray text (#c8c8c8), colored accent border per type.
 - **Referral Mining Boost System**: Each active referral adds +0.1/h to the inviter's mining speed. Stored in `referral_mining_boost` (per-hour value) on the users table. Boosts are auto-removed if the friend leaves the required channel/group, and auto-restored when they rejoin. Referrer receives Telegram notifications on changes. Invite popup accessible via header button.
-- **Withdrawal System**: Direct SAT withdrawals to Bitcoin, Lightning Network, or FaucetPay. Minimum 100 SAT, 0% fee. Balance deducted from `balance` field on admin approval. Admin can approve/reject with automatic balance deduction/refund.
+- **Withdrawal System**: Direct AXN withdrawals. Minimum 20 AXN, with configurable fee. Balance deducted from `balance` field on admin approval. Admin can approve/reject with automatic balance deduction/refund.
 - **ArcPay Integration**: Full integration for PDZ top-ups, including secure API credential handling, retry logic, and a webhook for payment notifications.
 - **Earning Mechanics**: Includes Faucetpay (+1 Hrum), Referral System, and Ad Rewards, all managed as Hrum integers.
 - **Number Formatting**: Uses compact notation (1k, 1M) for large Hrum amounts.
