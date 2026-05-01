@@ -27,7 +27,7 @@ function fmt(n: number | string): string {
 }
 
 function fmtSat(n: number | string): string {
-  return fmt(n) + " SAT";
+  return fmt(n) + " AXN";
 }
 
 interface AdminStats {
@@ -337,10 +337,10 @@ function UserSection({ usersData, isLoading }: { usersData: any; isLoading: bool
                     {parseFloat(u.miningRate || u.referralMiningBoost || "0").toFixed(2)}/h
                   </TableCell>
                   <TableCell className="text-[10px] font-semibold text-white py-2">
-                    {fmt(u.totalEarnings || u.balance || 0)} SAT
+                    {fmt(u.totalEarnings || u.balance || 0)} AXN
                   </TableCell>
                   <TableCell className="text-[10px] text-gray-300 py-2">
-                    {fmt(u.totalWithdrawn || 0)} SAT
+                    {fmt(u.totalWithdrawn || 0)} AXN
                   </TableCell>
                   <TableCell className="py-2">
                     {u.banned
@@ -449,9 +449,9 @@ function UserProfilePanel({ user: init, onClose }: { user: any; onClose: () => v
     ["Telegram ID", u.telegram_id || "—"],
     ["User ID", u.referralCode || u.id?.slice(0, 12) || "—"],
     ["Invite Count", u.friendsInvited ?? u.referralCount ?? 0],
-    ["Mining Speed", `${(parseFloat(u.miningRate || "0") * 3600 + parseFloat(u.referralMiningBoost || "0")).toFixed(4)} SAT/h`],
-    ["Total Mined", `${fmt(u.totalEarnings || "0")} SAT`],
-    ["Total Withdrawn", `${fmt(totalWithdrawn)} SAT`],
+    ["Mining Speed", `${(parseFloat(u.miningRate || "0") * 3600 + parseFloat(u.referralMiningBoost || "0")).toFixed(4)} AXN/h`],
+    ["Total Mined", `${fmt(u.totalEarnings || "0")} AXN`],
+    ["Total Withdrawn", `${fmt(totalWithdrawn)} AXN`],
     ["Last Active", u.updatedAt ? new Date(u.updatedAt).toLocaleString() : "—"],
     ["Status", u.banned ? "Banned" : "Active"],
     ["Join Date", u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "—"],
@@ -638,8 +638,8 @@ function WithdrawSection({ payoutData, pendingData }: { payoutData: any; pending
                     <p className="text-[10px] text-gray-500">ID: {userId}</p>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm font-bold text-white">{fmt(amount)} SAT</p>
-                    {fee > 0 && <p className="text-[10px] text-gray-500">Fee: {fmt(fee)} SAT</p>}
+                    <p className="text-sm font-bold text-white">{fmt(amount)} AXN</p>
+                    {fee > 0 && <p className="text-[10px] text-gray-500">Fee: {fmt(fee)} AXN</p>}
                   </div>
                 </div>
 
@@ -1088,7 +1088,7 @@ function SettingsSection() {
       {/* Affiliates */}
       {cat === "affiliates" && (
         <SettCard title="Referral & Affiliates" icon={<GitBranch className="w-3.5 h-3.5" />} color="text-teal-400">
-          <SettField label="Referral Mining Boost (SAT/h per invite)" hint="Extra SAT/hour added to inviter's mining rate per active referral. e.g. 0.02 = +0.02 SAT/h per friend">
+          <SettField label="Referral Mining Boost (AXN/h per invite)" hint="Extra AXN/hour added to inviter's mining rate per active referral. e.g. 0.02 = +0.02 AXN/h per friend">
             <Input type="number" step="0.001" value={s.referralBoostPerInvite} onChange={e => setS({ ...s, referralBoostPerInvite: e.target.value })} className="h-8 text-xs bg-[#0a0a0a] border-white/10" />
           </SettField>
           <SettField label="Affiliate Commission (%)" hint="Commission for affiliates">
@@ -1107,10 +1107,10 @@ function SettingsSection() {
       {/* Withdrawals */}
       {cat === "withdrawals" && (
         <SettCard title="Withdrawal Settings" icon={<DollarSign className="w-3.5 h-3.5" />} color="text-green-400">
-          <SettField label="Minimum Withdrawal (SAT)" hint="Minimum SAT required to withdraw">
+          <SettField label="Minimum Withdrawal (AXN)" hint="Minimum AXN required to withdraw">
             <Input type="number" value={s.minimum_withdrawal_sat} onChange={e => setS({ ...s, minimum_withdrawal_sat: e.target.value })} className="h-8 text-xs bg-[#0a0a0a] border-white/10" />
           </SettField>
-          <SettField label="Withdrawal Fee (SAT)" hint="Fee deducted per withdrawal (0 = free)">
+          <SettField label="Withdrawal Fee (AXN)" hint="Fee deducted per withdrawal (0 = free)">
             <Input type="number" value={s.withdrawal_fee_sat} onChange={e => setS({ ...s, withdrawal_fee_sat: e.target.value })} className="h-8 text-xs bg-[#0a0a0a] border-white/10" />
           </SettField>
           <div className="flex items-center justify-between py-1">
@@ -1140,7 +1140,7 @@ function SettingsSection() {
         <SettCard title="Ad Settings" icon={<Eye className="w-3.5 h-3.5" />} color="text-purple-400">
           <div className="space-y-1 pb-1">
             <p className="text-[10px] font-semibold text-purple-400 uppercase tracking-wide">Section 1</p>
-            <SettField label="Mining Boost Per Ad (SAT/h)" hint="SAT/h added to mining rate per Section 1 ad watched">
+            <SettField label="Mining Boost Per Ad (AXN/h)" hint="AXN/h added to mining rate per Section 1 ad watched">
               <Input type="number" step="0.0001" value={s.ad_section1_reward} onChange={e => setS({ ...s, ad_section1_reward: e.target.value })} className="h-8 text-xs bg-[#0a0a0a] border-white/10" />
             </SettField>
             <SettField label="Daily Limit" hint="Max Section 1 ads per user per day">
@@ -1149,7 +1149,7 @@ function SettingsSection() {
           </div>
           <div className="border-t border-white/5 pt-3 space-y-1">
             <p className="text-[10px] font-semibold text-indigo-400 uppercase tracking-wide">Section 2</p>
-            <SettField label="Mining Boost Per Ad (SAT/h)" hint="SAT/h added to mining rate per Section 2 ad watched">
+            <SettField label="Mining Boost Per Ad (AXN/h)" hint="AXN/h added to mining rate per Section 2 ad watched">
               <Input type="number" step="0.0001" value={s.ad_section2_reward} onChange={e => setS({ ...s, ad_section2_reward: e.target.value })} className="h-8 text-xs bg-[#0a0a0a] border-white/10" />
             </SettField>
             <SettField label="Daily Limit" hint="Max Section 2 ads per user per day">

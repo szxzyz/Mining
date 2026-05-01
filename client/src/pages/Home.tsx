@@ -23,6 +23,7 @@ import { AnimatePresence, motion } from "framer-motion";
 import WithdrawalPopup from "@/components/WithdrawalPopup";
 import MenuPopup from "@/components/MenuPopup";
 import MiningMachinePanel from "@/components/MiningMachinePanel";
+import UpgradeMachinePopup from "@/components/UpgradeMachinePopup";
 
 
 // Unified Task Interface
@@ -75,6 +76,7 @@ export default function Home() {
   const queryClient = useQueryClient();
 
   const [promoPopupOpen, setPromoPopupOpen] = useState(false);
+  const [upgradePopupOpen, setUpgradePopupOpen] = useState(false);
   const [withdrawPopupOpen, setWithdrawPopupOpen] = useState(false);
   const [miningPausedBanner, setMiningPausedBanner] = useState(false);
   const [convertPopupOpen, setConvertPopupOpen] = useState(false);
@@ -388,7 +390,7 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ['/api/auth/user'] });
       queryClient.invalidateQueries({ queryKey: ['/api/tasks/home/unified'] });
       const satReward = Number(data.reward ?? 0);
-      showNotification(`+${satReward.toLocaleString()} SAT earned!`, 'success');
+      showNotification(`+${satReward.toLocaleString()} AXN earned!`, 'success');
     },
     onError: (error: any) => {
       showNotification(error.message || 'Failed to claim reward', 'error');
@@ -562,7 +564,7 @@ export default function Home() {
       queryClient.invalidateQueries({ queryKey: ["/api/user/stats"] });
       queryClient.invalidateQueries({ queryKey: ["/api/earnings"] });
       
-      showNotification(`You received ${Math.round(data.rewardAXN || 1000).toLocaleString()} SAT on your balance`, "success");
+      showNotification(`You received ${Math.round(data.rewardAXN || 1000).toLocaleString()} AXN on your balance`, "success");
       setLoadingProvider(null);
     },
     onError: (error: any) => {
@@ -939,7 +941,7 @@ export default function Home() {
         extraAdsWatchedToday: data.extraAdsWatchedToday
       }));
       
-      showNotification(`You received ${data.rewardAXN} SAT for Extra Earn!`, "success");
+      showNotification(`You received ${data.rewardAXN} AXN for Extra Earn!`, "success");
     } catch (error: any) {
       console.error('Extra earn error:', error);
       showNotification(error.message || "Extra Earn ad failed", "error");
@@ -1253,93 +1255,36 @@ export default function Home() {
 
 
 
-      {/* Bottom Navigation — top-rounded, flush at bottom with slight side gap */}
+      {/* Bottom Navigation — single Upgrade Machine CTA */}
       <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
-        <div className="w-full max-w-md relative pointer-events-auto">
-          {/* Soft gold ambient halo behind the center action */}
+        <div className="w-full max-w-md relative pointer-events-auto px-5 pb-4 pt-3"
+          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
+        >
+          {/* Ambient glow */}
           <div
             aria-hidden
-            className="absolute left-1/2 -translate-x-1/2 -top-4 w-44 h-16 rounded-full pointer-events-none"
+            className="absolute left-1/2 -translate-x-1/2 -top-6 w-60 h-12 rounded-full pointer-events-none"
             style={{
-              background: 'radial-gradient(closest-side, rgba(245,197,66,0.22), rgba(245,197,66,0) 70%)',
-              filter: 'blur(8px)',
+              background: 'radial-gradient(closest-side, rgba(245,197,66,0.18), rgba(245,197,66,0) 70%)',
+              filter: 'blur(10px)',
             }}
           />
-
-          <div
-            className="relative flex items-center overflow-hidden"
+          <button
+            onClick={() => setUpgradePopupOpen(true)}
+            className="w-full h-14 flex items-center justify-center gap-2.5 font-black text-sm uppercase tracking-wider transition-all active:scale-[0.97] rounded-2xl"
             style={{
-              borderTopLeftRadius: 28,
-              borderTopRightRadius: 28,
-              borderBottomLeftRadius: 0,
-              borderBottomRightRadius: 0,
-              background:
-                'linear-gradient(180deg, rgba(22,22,22,0.96) 0%, rgba(10,10,10,0.98) 100%)',
-              borderTop: '1px solid rgba(255,255,255,0.06)',
-              borderLeft: '1px solid rgba(255,255,255,0.06)',
-              borderRight: '1px solid rgba(255,255,255,0.06)',
-              boxShadow:
-                '0 -10px 30px rgba(0,0,0,0.55), inset 0 1px 0 rgba(255,255,255,0.05)',
-              backdropFilter: 'blur(28px)',
-              WebkitBackdropFilter: 'blur(28px)',
-              paddingBottom: 'env(safe-area-inset-bottom, 0px)',
+              background: 'linear-gradient(135deg, #FFD970 0%, #F5C542 45%, #d4920a 100%)',
+              color: '#000',
+              boxShadow: '0 6px 24px rgba(245,197,66,0.4), 0 2px 8px rgba(212,146,10,0.3), inset 0 1px 0 rgba(255,255,255,0.4)',
             }}
           >
-            {/* Glowing accent rule — top edge highlight */}
-            <div
-              aria-hidden
-              className="absolute top-0 left-0 right-0 h-px pointer-events-none"
-              style={{
-                background:
-                  'linear-gradient(90deg, transparent 0%, rgba(245,197,66,0.35) 50%, transparent 100%)',
-              }}
-            />
-
-            {/* Invite */}
-            <button
-              onClick={() => setInviteOpen(true)}
-              className="group flex-1 flex flex-col items-center pt-4 pb-5 gap-1.5 transition-all active:scale-95"
-            >
-              <MdGroups style={{ width: 24, height: 24, color: '#4FC3F7' }} />
-              <span className="text-[9px] font-bold text-white/45 tracking-[0.14em] uppercase">
-                {tText('Invite')}
-              </span>
-            </button>
-
-            {/* Withdraw — elevated primary action */}
-            <button
-              onClick={() => setWithdrawPopupOpen(true)}
-              className="group flex-[1.3] flex flex-col items-center pt-3 pb-5 gap-1.5 transition-all active:scale-95 relative"
-            >
-              <div
-                className="flex items-center justify-center rounded-2xl px-5 py-2.5 gap-1.5 transition-all group-hover:brightness-110"
-                style={{
-                  background:
-                    'linear-gradient(135deg, #FFD970 0%, #F5C542 45%, #d4920a 100%)',
-                  boxShadow:
-                    '0 6px 20px rgba(245,197,66,0.45), 0 2px 6px rgba(212,146,10,0.4), inset 0 1px 0 rgba(255,255,255,0.35), inset 0 -1px 0 rgba(0,0,0,0.15)',
-                }}
-              >
-                <Banknote className="w-4 h-4 text-black/85" strokeWidth={2.5} />
-                <span className="text-black text-[11px] font-black tracking-[0.12em] uppercase">
-                  {tText('Withdraw')}
-                </span>
-              </div>
-            </button>
-
-            {/* Menu */}
-            <button
-              onClick={() => setMenuOpen(true)}
-              className="group flex-1 flex flex-col items-center pt-4 pb-5 gap-1.5 transition-all active:scale-95"
-            >
-              <Settings style={{ width: 24, height: 24, color: '#FFD54F', strokeWidth: 2 }} />
-              <span className="text-[9px] font-bold text-white/45 tracking-[0.14em] uppercase">
-                {tText('Menu')}
-              </span>
-            </button>
-          </div>
+            <span className="text-base">⚙️</span>
+            Upgrade Machine
+          </button>
         </div>
       </div>
+
+      {upgradePopupOpen && <UpgradeMachinePopup onClose={() => setUpgradePopupOpen(false)} />}
 
       {settingsOpen && (
         <SettingsPopup 
