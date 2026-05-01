@@ -1,10 +1,10 @@
-import { useState, useEffect, useCallback } from "react";
+import { useState, useEffect, useCallback, useRef } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, Shield, ShieldOff, Cpu, HardDrive, Activity,
   Wrench, ChevronUp, AlertTriangle, CheckCircle, Play,
-  Loader2, X, Info
+  Loader2, X, Info, Clock
 } from "lucide-react";
 import { showNotification } from "@/components/AppNotification";
 import { apiRequest } from "@/lib/queryClient";
@@ -33,6 +33,9 @@ interface MachineState {
   pendingVirusDamage: number;
   nextVirusIn: number;
 }
+
+const AV_DURATION_SECONDS = 25 * 60; // 25 minutes
+const AV_STORAGE_KEY = "av_activated_at";
 
 function formatTime(seconds: number): string {
   if (seconds <= 0) return "00:00:00";
@@ -79,6 +82,70 @@ export default function MiningMachinePanel() {
     if (state) setLocalMined(state.minedAxn);
   }, [state?.minedAxn]);
 
+  // Antivirus 25-minute countdown
+  const [avSecondsLeft, setAvSecondsLeft] = useState(0);
+  const avIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  const startAvCountdown = useCallback((activatedAt: number) => {
+    if (avIntervalRef.current) clearInterval(avIntervalRef.current);
+    const tick = () => {
+      const elapsed = Math.floor((Date.now() - activatedAt) / 1000);
+      const remaining = AV_DURATION_SECONDS - elapsed;
+      if (remaining <= 0) {
+        setAvSecondsLeft(0);
+        if (avIntervalRef.current) clearInterval(avIntervalRef.current);
+      } else {
+        setAvSecondsLeft(remaining);
+      }
+    };
+    tick();
+    avIntervalRef.current = setInterval(tick, 1000);
+  }, []);
+
+  // Track AV activation via localStorage
+  useEffect(() => {
+    if (!state) return;
+
+    if (state.antivirusActive) {
+      const stored = localStorage.getItem(AV_STORAGE_KEY);
+      if (stored) {
+        const activatedAt = parseInt(stored, 10);
+        const elapsed = Math.floor((Date.now() - activatedAt) / 1000);
+        if (elapsed < AV_DURATION_SECONDS) {
+          startAvCountdown(activatedAt);
+        } else {
+          // Time expired — auto-deactivate
+          localStorage.removeItem(AV_STORAGE_KEY);
+          antivirusMutation.mutate();
+        }
+      } else {
+        // AV is on but no timestamp stored — set now (might have been activated elsewhere)
+        const now = Date.now();
+        localStorage.setItem(AV_STORAGE_KEY, String(now));
+        startAvCountdown(now);
+      }
+    } else {
+      // AV is off
+      if (avIntervalRef.current) clearInterval(avIntervalRef.current);
+      setAvSecondsLeft(0);
+      localStorage.removeItem(AV_STORAGE_KEY);
+    }
+  }, [state?.antivirusActive]);
+
+  // Auto-deactivate when countdown hits zero
+  useEffect(() => {
+    if (avSecondsLeft === 0 && state?.antivirusActive) {
+      const stored = localStorage.getItem(AV_STORAGE_KEY);
+      if (stored) {
+        const elapsed = Math.floor((Date.now() - parseInt(stored, 10)) / 1000);
+        if (elapsed >= AV_DURATION_SECONDS) {
+          localStorage.removeItem(AV_STORAGE_KEY);
+          antivirusMutation.mutate();
+        }
+      }
+    }
+  }, [avSecondsLeft]);
+
   // Virus attack countdown (ticks down every second when AV is off)
   const [virusCountdown, setVirusCountdown] = useState(120);
   useEffect(() => {
@@ -90,7 +157,7 @@ export default function MiningMachinePanel() {
     if (!state || state.antivirusActive) return;
     const t = setInterval(() => {
       setVirusCountdown(prev => {
-        if (prev <= 1) return 120; // reset after attack (server will apply damage on next fetch)
+        if (prev <= 1) return 120;
         return prev - 1;
       });
     }, 1000);
@@ -106,8 +173,8 @@ export default function MiningMachinePanel() {
   }, [state?.cpuRunning, state?.miningRate, state?.capacity]);
 
   const invalidate = useCallback(() => {
-    queryClient.invalidateQueries({ queryKey: ["/api/axn-mining/state"] });
-    queryClient.invalidateQueries({ queryKey: ["/api/auth/user"] });
+    queryClient.refetchQueries({ queryKey: ["/api/axn-mining/state"] });
+    queryClient.refetchQueries({ queryKey: ["/api/auth/user"] });
   }, [queryClient]);
 
   const startCpuMutation = useMutation({
@@ -140,7 +207,19 @@ export default function MiningMachinePanel() {
 
   const antivirusMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/axn-mining/toggle-antivirus").then(r => r.json()),
-    onSuccess: (d) => { showNotification(d.message, d.active ? "success" : "info"); invalidate(); },
+    onSuccess: (d) => {
+      if (d.active) {
+        const now = Date.now();
+        localStorage.setItem(AV_STORAGE_KEY, String(now));
+        startAvCountdown(now);
+      } else {
+        localStorage.removeItem(AV_STORAGE_KEY);
+        if (avIntervalRef.current) clearInterval(avIntervalRef.current);
+        setAvSecondsLeft(0);
+      }
+      showNotification(d.message, d.active ? "success" : "info");
+      invalidate();
+    },
     onError: (e: any) => showNotification(e.message || "Failed", "error"),
   });
 
@@ -163,7 +242,12 @@ export default function MiningMachinePanel() {
   const capacityPct = Math.min(100, (localMined / state.capacity) * 100);
   const healthColor = state.machineHealth > 60 ? "#22c55e" : state.machineHealth > 30 ? "#f59e0b" : "#ef4444";
   const canClaim = localMined >= 0.01;
-  const cpuFinished = !state.cpuRunning && state.cpuRemainingSeconds === 0;
+
+  // Real-time energy: drains from 100→0 as CPU runs, based on live cpuCountdown
+  const energyPct = state.cpuRunning
+    ? Math.max(0, Math.round((cpuCountdown / state.cpuDurationSec) * 100))
+    : state.hasEnergy ? 100 : 0;
+  const avPct = state.antivirusActive ? ((AV_DURATION_SECONDS - avSecondsLeft) / AV_DURATION_SECONDS) * 100 : 0;
 
   return (
     <div className="w-full space-y-3">
@@ -199,6 +283,37 @@ export default function MiningMachinePanel() {
                 style={{ width: `${((120 - virusCountdown) / 120) * 100}%` }}
               />
             </div>
+          </motion.div>
+        )}
+      </AnimatePresence>
+
+      {/* Antivirus Active Banner with countdown */}
+      <AnimatePresence>
+        {state.antivirusActive && avSecondsLeft > 0 && (
+          <motion.div
+            initial={{ opacity: 0, y: -8 }}
+            animate={{ opacity: 1, y: 0 }}
+            exit={{ opacity: 0, y: -8 }}
+            className="bg-green-950/60 border border-green-500/30 rounded-xl px-4 py-3"
+          >
+            <div className="flex items-center justify-between mb-2">
+              <div className="flex items-center gap-2.5">
+                <Shield className="w-4 h-4 text-green-400 flex-shrink-0" />
+                <p className="text-green-300 text-xs font-bold">Antivirus Active — Machine Protected</p>
+              </div>
+              <div className="flex items-center gap-1 bg-green-500/10 border border-green-500/20 rounded-full px-2 py-0.5">
+                <Clock className="w-3 h-3 text-green-400" />
+                <span className="text-green-400 text-[10px] font-black tabular-nums">{formatTime(avSecondsLeft)}</span>
+              </div>
+            </div>
+            <div className="h-1.5 bg-green-900/40 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full rounded-full bg-green-500"
+                style={{ width: `${100 - (avSecondsLeft / AV_DURATION_SECONDS) * 100}%` }}
+                transition={{ duration: 1 }}
+              />
+            </div>
+            <p className="text-green-400/50 text-[10px] mt-1.5">Auto-disables after 25 minutes. Reactivate manually when needed.</p>
           </motion.div>
         )}
       </AnimatePresence>
@@ -251,7 +366,7 @@ export default function MiningMachinePanel() {
               className="text-4xl font-black tabular-nums tracking-tight"
               style={{ color: state.cpuRunning ? '#4ade80' : '#ffffff60' }}
             >
-              {localMined.toFixed(4)}
+              {localMined.toFixed(2)}
             </div>
             <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mt-1">AXN Mined</p>
           </div>
@@ -309,29 +424,57 @@ export default function MiningMachinePanel() {
             </div>
           </div>
 
-          {/* Energy Bar */}
+          {/* Energy Bar — Real-time display */}
           <div className="flex items-center gap-3 bg-[#161616] rounded-xl px-3 py-2.5 border border-[#1e1e1e] mb-4">
             <div className="flex items-center gap-1.5 flex-1">
-              <Zap className={`w-3.5 h-3.5 flex-shrink-0 ${state.hasEnergy ? 'text-[#F5C542]' : 'text-white/20'}`} />
+              <Zap
+                className="w-3.5 h-3.5 flex-shrink-0"
+                style={{ color: energyPct > 60 ? '#F5C542' : energyPct > 20 ? '#f59e0b' : energyPct > 0 ? '#ef4444' : 'rgba(255,255,255,0.15)' }}
+              />
               <div className="flex-1">
                 <div className="flex justify-between items-center mb-1">
                   <span className="text-white/50 text-[10px] font-bold uppercase tracking-wider">Energy</span>
-                  <span className={`text-[10px] font-black ${state.hasEnergy ? 'text-[#F5C542]' : 'text-white/30'}`}>
-                    {state.hasEnergy ? 'FULL' : 'EMPTY'}
+                  <span
+                    className="text-[10px] font-black tabular-nums"
+                    style={{ color: energyPct > 60 ? '#F5C542' : energyPct > 20 ? '#f59e0b' : energyPct > 0 ? '#ef4444' : '#f87171' }}
+                  >
+                    {energyPct} / 100
                   </span>
                 </div>
-                <div className="h-1.5 bg-white/5 rounded-full">
-                  <div
-                    className="h-full rounded-full transition-all"
+                <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full rounded-full"
+                    animate={{ width: `${energyPct}%` }}
+                    transition={{ duration: 0.8, ease: "linear" }}
                     style={{
-                      width: state.hasEnergy ? '100%' : '0%',
-                      background: 'linear-gradient(90deg,#F5C542,#d4920a)',
+                      background: energyPct > 60
+                        ? 'linear-gradient(90deg,#F5C542,#d4920a)'
+                        : energyPct > 20
+                        ? 'linear-gradient(90deg,#f59e0b,#d97706)'
+                        : energyPct > 0
+                        ? 'linear-gradient(90deg,#ef4444,#dc2626)'
+                        : 'rgba(239,68,68,0.3)',
                     }}
                   />
                 </div>
+                <div className="flex justify-between items-center mt-1">
+                  <span className="text-white/25 text-[9px]">
+                    {state.cpuRunning
+                      ? `⚡ Mining — ${energyPct}% remaining`
+                      : energyPct === 100
+                      ? '⚡ Full — Ready to mine'
+                      : '🪫 Empty — Refill to continue'}
+                  </span>
+                  <span
+                    className="text-[9px] font-bold"
+                    style={{ color: energyPct > 20 ? 'rgba(245,197,66,0.6)' : 'rgba(248,113,113,0.6)' }}
+                  >
+                    {energyPct}%
+                  </span>
+                </div>
               </div>
             </div>
-            {!state.hasEnergy && (
+            {!state.cpuRunning && !state.hasEnergy && (
               <button
                 onClick={() => refillMutation.mutate()}
                 disabled={refillMutation.isPending}
@@ -462,7 +605,6 @@ export default function MiningMachinePanel() {
               className="overflow-hidden"
             >
               <div className="px-4 pb-4 space-y-2 border-t border-[#1a1a1a] pt-3">
-                {/* Mining Upgrade */}
                 <UpgradeRow
                   icon={<Activity className="w-4 h-4 text-[#F5C542]" />}
                   label="Mining Speed"
@@ -475,7 +617,6 @@ export default function MiningMachinePanel() {
                   isPending={upgradeMutation.isPending}
                   onUpgrade={() => upgradeMutation.mutate('mining')}
                 />
-                {/* Capacity Upgrade */}
                 <UpgradeRow
                   icon={<HardDrive className="w-4 h-4 text-blue-400" />}
                   label="Capacity"
@@ -488,7 +629,6 @@ export default function MiningMachinePanel() {
                   isPending={upgradeMutation.isPending}
                   onUpgrade={() => upgradeMutation.mutate('capacity')}
                 />
-                {/* CPU Upgrade */}
                 <UpgradeRow
                   icon={<Cpu className="w-4 h-4 text-purple-400" />}
                   label="CPU Duration"
@@ -512,7 +652,7 @@ export default function MiningMachinePanel() {
         <Info className="w-3.5 h-3.5 text-white/20 flex-shrink-0 mt-0.5" />
         <p className="text-white/25 text-[10px] leading-relaxed">
           Start CPU to begin mining. Claim before capacity fills.
-          Keep antivirus ON to avoid AXN loss from virus attacks.
+          Antivirus auto-disables after 25 minutes — reactivate manually.
           Repair machine if health drops below 40%.
         </p>
       </div>
@@ -535,46 +675,38 @@ interface UpgradeRowProps {
 
 function UpgradeRow({ icon, label, currentLevel, currentValue, nextValue, cost, balance, isMax, isPending, onUpgrade }: UpgradeRowProps) {
   const canAfford = balance >= cost;
-
   return (
-    <div className="flex items-center gap-3 bg-[#141414] rounded-xl px-3 py-2.5 border border-[#1e1e1e]">
-      <div className="w-8 h-8 rounded-lg bg-white/[0.04] flex items-center justify-center flex-shrink-0">
+    <div className="flex items-center gap-3 bg-[#161616] rounded-xl px-3 py-2.5 border border-[#1e1e1e]">
+      <div className="w-8 h-8 rounded-lg bg-white/5 flex items-center justify-center flex-shrink-0">
         {icon}
       </div>
       <div className="flex-1 min-w-0">
         <div className="flex items-center gap-1.5">
-          <span className="text-white text-xs font-black">{label}</span>
-          <span className="text-white/30 text-[9px] font-bold bg-white/5 rounded px-1 py-0.5">Lv.{currentLevel}</span>
+          <p className="text-white text-xs font-bold">{label}</p>
+          <span className="text-white/30 text-[10px]">Lv.{currentLevel}</span>
         </div>
-        <div className="flex items-center gap-1 mt-0.5">
-          <span className="text-white/50 text-[10px] tabular-nums">{currentValue}</span>
-          {nextValue && !isMax && (
-            <>
-              <span className="text-white/20 text-[10px]">→</span>
-              <span className="text-[#F5C542] text-[10px] font-bold tabular-nums">{nextValue}</span>
-            </>
-          )}
-        </div>
+        <p className="text-white/40 text-[10px] tabular-nums">
+          {currentValue}
+          {nextValue && <span className="text-[#F5C542]/60"> → {nextValue}</span>}
+        </p>
       </div>
       {isMax ? (
-        <div className="flex items-center gap-1 px-2.5 py-1 bg-[#F5C542]/10 rounded-lg">
-          <CheckCircle className="w-3 h-3 text-[#F5C542]" />
-          <span className="text-[#F5C542] text-[10px] font-black uppercase">MAX</span>
-        </div>
+        <div className="text-[10px] font-black text-[#F5C542]/60 uppercase tracking-wider">MAX</div>
       ) : (
         <button
           onClick={onUpgrade}
           disabled={isPending || !canAfford}
-          className={`flex-shrink-0 h-8 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-40 disabled:cursor-not-allowed ${
-            canAfford
-              ? 'text-black'
-              : 'text-white/30 border border-white/10 bg-transparent'
-          }`}
-          style={canAfford ? { background: 'linear-gradient(135deg,#F5C542,#d4920a)' } : {}}
+          className="flex-shrink-0 h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider transition-all active:scale-95 disabled:opacity-40"
+          style={canAfford ? {
+            background: 'linear-gradient(135deg,#F5C542,#d4920a)',
+            color: '#000',
+          } : {
+            background: 'rgba(255,255,255,0.06)',
+            border: '1px solid rgba(255,255,255,0.1)',
+            color: 'rgba(255,255,255,0.3)',
+          }}
         >
-          {isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : (
-            <span>{cost >= 1000 ? `${(cost / 1000).toFixed(0)}k` : cost}</span>
-          )}
+          {isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : `${cost} AXN`}
         </button>
       )}
     </div>
