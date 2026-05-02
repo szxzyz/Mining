@@ -9817,6 +9817,99 @@ ${walletAddress}
     }
   });
 
+  // ── Daily Activity ────────────────────────────────────────────────────────
+  // Ensure columns exist (run once, idempotent)
+  (async () => {
+    try {
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_activity_day INTEGER DEFAULT 1`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS daily_activity_claimed_at TIMESTAMP`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_well_balance DECIMAL(20,4) DEFAULT '0'`);
+      await db.execute(sql`ALTER TABLE users ADD COLUMN IF NOT EXISTS referral_well_total_earned DECIMAL(20,4) DEFAULT '0'`);
+    } catch {}
+  })();
+
+  const DAILY_REWARDS = [5,5,10,12,20,23,40,44,60,65,80,86,100,107,120,128,140,149,160,170,180,191,200,212,220,233,240,254,260,275];
+
+  app.get('/api/daily-activity/status', authenticateTelegram, async (req: any, res) => {
+    try {
+      const userId = req.user?.user?.id;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const rows = await db.execute(sql`SELECT daily_activity_day, daily_activity_claimed_at FROM users WHERE id = ${userId}`);
+      const row = (rows as any).rows?.[0] || {};
+      const day = Math.min(row.daily_activity_day ?? 1, 30);
+      const claimedAt = row.daily_activity_claimed_at ? new Date(row.daily_activity_claimed_at) : null;
+      const today = new Date();
+      const claimed = claimedAt
+        ? claimedAt.getFullYear() === today.getFullYear() &&
+          claimedAt.getMonth() === today.getMonth() &&
+          claimedAt.getDate() === today.getDate()
+        : false;
+      return res.json({ currentDay: day, claimed, nextReset: new Date(today.getFullYear(), today.getMonth(), today.getDate() + 1).toISOString() });
+    } catch (e) {
+      return res.status(500).json({ message: "Failed" });
+    }
+  });
+
+  app.post('/api/daily-activity/claim', authenticateTelegram, async (req: any, res) => {
+    try {
+      const userId = req.user?.user?.id;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const rows = await db.execute(sql`SELECT daily_activity_day, daily_activity_claimed_at, balance FROM users WHERE id = ${userId}`);
+      const row = (rows as any).rows?.[0];
+      if (!row) return res.status(404).json({ message: "User not found" });
+      const today = new Date();
+      const claimedAt = row.daily_activity_claimed_at ? new Date(row.daily_activity_claimed_at) : null;
+      const alreadyClaimed = claimedAt
+        ? claimedAt.getFullYear() === today.getFullYear() &&
+          claimedAt.getMonth() === today.getMonth() &&
+          claimedAt.getDate() === today.getDate()
+        : false;
+      if (alreadyClaimed) return res.status(400).json({ message: "Already claimed today" });
+      const currentDay = Math.min(row.daily_activity_day ?? 1, 30);
+      const reward = DAILY_REWARDS[currentDay - 1] || 5;
+      const nextDay = currentDay >= 30 ? 1 : currentDay + 1;
+      await db.execute(sql`UPDATE users SET balance = COALESCE(balance,0) + ${reward}, daily_activity_claimed_at = NOW(), daily_activity_day = ${nextDay} WHERE id = ${userId}`);
+      return res.json({ success: true, day: currentDay, reward, nextDay });
+    } catch (e) {
+      return res.status(500).json({ message: "Failed to claim" });
+    }
+  });
+
+  // ── Referral Well ─────────────────────────────────────────────────────────
+  app.get('/api/referrals/well', authenticateTelegram, async (req: any, res) => {
+    try {
+      const userId = req.user?.user?.id;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const rows = await db.execute(sql`SELECT referral_well_balance, referral_well_total_earned FROM users WHERE id = ${userId}`);
+      const row = (rows as any).rows?.[0] || {};
+      const refCountRows = await db.execute(sql`SELECT COUNT(*) as cnt FROM referrals WHERE referrer_id = ${userId}`);
+      const totalFriends = parseInt((refCountRows as any).rows?.[0]?.cnt || '0');
+      return res.json({
+        wellBalance: parseFloat(row.referral_well_balance ?? '0'),
+        totalEarned: parseFloat(row.referral_well_total_earned ?? '0'),
+        totalFriends,
+        totalWithdrawalCommission: parseFloat(row.referral_well_balance ?? '0'),
+      });
+    } catch (e) {
+      return res.status(500).json({ message: "Failed" });
+    }
+  });
+
+  app.post('/api/referrals/well/claim', authenticateTelegram, async (req: any, res) => {
+    try {
+      const userId = req.user?.user?.id;
+      if (!userId) return res.status(401).json({ message: "Unauthorized" });
+      const rows = await db.execute(sql`SELECT referral_well_balance FROM users WHERE id = ${userId}`);
+      const row = (rows as any).rows?.[0];
+      const wellBalance = parseFloat(row?.referral_well_balance ?? '0');
+      if (wellBalance <= 0) return res.status(400).json({ message: "Your Well is empty" });
+      await db.execute(sql`UPDATE users SET balance = COALESCE(balance,0) + ${wellBalance}, referral_well_balance = 0 WHERE id = ${userId}`);
+      return res.json({ success: true, amount: wellBalance });
+    } catch (e) {
+      return res.status(500).json({ message: "Failed to claim" });
+    }
+  });
+
   // Contest submission endpoint
   app.post('/api/contest/submit', authenticateTelegram, async (req: any, res) => {
     try {
