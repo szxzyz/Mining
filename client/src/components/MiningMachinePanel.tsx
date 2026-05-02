@@ -3,8 +3,8 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, Shield, ShieldOff, Cpu, HardDrive, Activity,
-  Wrench, AlertTriangle, Play,
-  Loader2, Clock
+  Wrench, Play,
+  Loader2, AlertTriangle
 } from "lucide-react";
 import { showNotification } from "@/components/AppNotification";
 import { apiRequest } from "@/lib/queryClient";
@@ -75,7 +75,12 @@ function makelog(miningRate: number, mined: number): string {
   return `${ts} stratum: accepted  diff=512K  ${hs}MH`;
 }
 
-function MiningTerminal({ isMining, miningRate, mined }: { isMining: boolean; miningRate: number; mined: number }) {
+function MiningTerminal({ isMining, miningRate, mined, machineStopped }: {
+  isMining: boolean;
+  miningRate: number;
+  mined: number;
+  machineStopped: boolean;
+}) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [logs, setLogs] = useState<string[]>([]);
   const logsRef = useRef<string[]>([]);
@@ -106,7 +111,9 @@ function MiningTerminal({ isMining, miningRate, mined }: { isMining: boolean; mi
           const x = i * fontSize;
           const y = drops[i] * fontSize;
           const rng = Math.random();
-          ctx.fillStyle = rng > 0.93 ? "#fff" : rng > 0.55 ? "#39ff14" : "#00960a";
+          ctx.fillStyle = machineStopped
+            ? rng > 0.93 ? "#fff" : rng > 0.55 ? "#ef4444" : "#7f1d1d"
+            : rng > 0.93 ? "#fff" : rng > 0.55 ? "#39ff14" : "#00960a";
           ctx.font = `${fontSize}px monospace`;
           ctx.fillText(ch, x, y);
           if (y > H && Math.random() > 0.975) drops[i] = 0;
@@ -117,7 +124,7 @@ function MiningTerminal({ isMining, miningRate, mined }: { isMining: boolean; mi
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, []);
+  }, [machineStopped]);
 
   useEffect(() => {
     if (!isMining) return;
@@ -139,7 +146,14 @@ function MiningTerminal({ isMining, miningRate, mined }: { isMining: boolean; mi
         className="absolute inset-0 overflow-hidden px-2 py-1.5 flex flex-col justify-end"
         style={{ fontFamily: "monospace" }}
       >
-        {!isMining ? (
+        {machineStopped ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-2">
+            <AlertTriangle className="w-6 h-6 text-red-400" />
+            <span style={{ color: "#ef4444", fontSize: 11, fontWeight: 700, textAlign: "center" }}>
+              Machine stopped — repair required to resume mining
+            </span>
+          </div>
+        ) : !isMining ? (
           <div className="flex-1 flex items-center justify-center">
             <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 11 }}>— idle —</span>
           </div>
@@ -308,6 +322,7 @@ export default function MiningMachinePanel() {
   const capacityPct = Math.min(100, (localMined / state.capacity) * 100);
   const healthColor = state.machineHealth > 60 ? "#22c55e" : state.machineHealth > 30 ? "#f59e0b" : "#ef4444";
   const canClaim = localMined >= 0.01;
+  const machineStopped = state.machineHealth <= 0;
 
   const energyPct = state.cpuRunning
     ? Math.max(0, Math.round((cpuCountdown / state.cpuDurationSec) * 100))
@@ -317,23 +332,8 @@ export default function MiningMachinePanel() {
 
   return (
     <div className="w-full space-y-3">
-      <AnimatePresence>
-        {state.machineHealth > 0 && state.machineHealth < 40 && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="bg-amber-950/60 border border-amber-500/30 rounded-xl px-4 py-2.5"
-          >
-            <div className="flex items-center gap-2.5">
-              <AlertTriangle className="w-4 h-4 text-amber-400 flex-shrink-0" />
-              <p className="text-amber-300 text-xs font-semibold">
-                Health critical ({state.machineHealth}%)! Repair soon.
-              </p>
-            </div>
-          </motion.div>
-        )}
-      </AnimatePresence>
+      {/* AXN Mining Machine Title */}
+      <p className="text-center text-[10px] font-black uppercase tracking-[0.15em] text-white/30 mb-1">AXN Mining Machine</p>
 
       <div className="bg-[#000000] border border-[#1c1c1e] rounded-2xl overflow-hidden">
 
@@ -342,13 +342,9 @@ export default function MiningMachinePanel() {
           {state.antivirusActive ? (
             <div className="flex items-center gap-2">
               <Shield className="w-3.5 h-3.5 text-green-400" />
-              <span className="text-green-400 text-[11px] font-black uppercase tracking-wider">Antivirus Active — No Threats Detected</span>
-              {avSecondsLeft > 0 && (
-                <div className="flex items-center gap-1 bg-green-500/15 rounded-md px-1.5 py-0.5">
-                  <Clock className="w-2.5 h-2.5 text-green-400" />
-                  <span className="text-green-400 text-[9px] font-black tabular-nums">{formatTime(avSecondsLeft)}</span>
-                </div>
-              )}
+              <span className="text-green-400 text-[11px] font-black uppercase tracking-wider">
+                Antivirus active — no threats detected
+              </span>
             </div>
           ) : (
             <button
@@ -356,26 +352,28 @@ export default function MiningMachinePanel() {
               className="flex items-center gap-2 active:scale-95 transition-transform"
             >
               <ShieldOff className="w-3.5 h-3.5 text-red-400 animate-pulse" />
-              <span className="text-red-400 text-[11px] font-black uppercase tracking-wider">Virus Detected — Machine At Risk</span>
+              <span className="text-red-400 text-[11px] font-black uppercase tracking-wider">
+                Virus detected — machine at risk
+              </span>
             </button>
           )}
         </div>
 
-        {/* Level Labels Row */}
-        <div className="flex items-center justify-center gap-5 px-4 py-2 border-b border-[#1c1c1e]">
-          <div className="flex items-center gap-1.5">
+        {/* Level Labels Row — compact */}
+        <div className="flex items-center justify-center gap-3 px-4 py-2 border-b border-[#1c1c1e]">
+          <div className="flex items-center gap-1">
             <Activity className="w-3 h-3 text-[#F5C542]/60" />
             <span className="text-[#F5C542]/70 text-[10px] font-bold uppercase tracking-wide">Mining</span>
             <span className="text-[#F5C542] text-[10px] font-black tabular-nums">Lv.{state.miningLevel}</span>
           </div>
           <span className="text-white/10 text-xs">|</span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <HardDrive className="w-3 h-3 text-blue-400/60" />
             <span className="text-blue-400/70 text-[10px] font-bold uppercase tracking-wide">Capacity</span>
             <span className="text-blue-400 text-[10px] font-black tabular-nums">Lv.{state.capacityLevel}</span>
           </div>
           <span className="text-white/10 text-xs">|</span>
-          <div className="flex items-center gap-1.5">
+          <div className="flex items-center gap-1">
             <Cpu className="w-3 h-3 text-purple-400/60" />
             <span className="text-purple-400/70 text-[10px] font-bold uppercase tracking-wide">CPU</span>
             <span className="text-purple-400 text-[10px] font-black tabular-nums">Lv.{state.cpuLevel}</span>
@@ -388,6 +386,7 @@ export default function MiningMachinePanel() {
             isMining={isMining}
             miningRate={state.miningRate}
             mined={localMined}
+            machineStopped={machineStopped}
           />
         </div>
 
@@ -547,40 +546,20 @@ export default function MiningMachinePanel() {
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setRepairOpen(true)}
-                disabled={state.machineHealth >= 100}
-                className="h-9 rounded-xl flex items-center justify-center gap-1.5 font-bold text-[11px] uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
-                style={state.machineHealth < 100 ? {
-                  background: 'rgba(239,68,68,0.12)',
-                  border: '1px solid rgba(239,68,68,0.25)',
-                  color: '#f87171',
-                } : {
-                  background: '#1c1c1e',
-                  border: '1px solid rgba(255,255,255,0.06)',
-                  color: 'rgba(255,255,255,0.2)',
-                }}
+                className="h-10 rounded-xl flex items-center justify-center gap-1.5 font-black text-[11px] uppercase tracking-widest transition-all active:scale-[0.97]"
+                style={{ background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}
               >
-                <Wrench className="w-3 h-3" /> Repair
+                <Wrench className="w-3.5 h-3.5" /> Repair
               </button>
-
               <button
                 onClick={() => setAntivirusOpen(true)}
-                disabled={state.antivirusActive}
-                className="h-9 rounded-xl flex items-center justify-center gap-1.5 font-bold text-[11px] uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-40"
-                style={state.antivirusActive ? {
-                  background: 'rgba(34,197,94,0.12)',
-                  border: '1px solid rgba(34,197,94,0.25)',
-                  color: '#4ade80',
-                } : {
-                  background: 'rgba(239,68,68,0.08)',
-                  border: '1px solid rgba(239,68,68,0.2)',
-                  color: '#f87171',
-                }}
+                className="h-10 rounded-xl flex items-center justify-center gap-1.5 font-black text-[11px] uppercase tracking-widest transition-all active:scale-[0.97]"
+                style={state.antivirusActive
+                  ? { background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', color: '#22c55e' }
+                  : { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444' }
+                }
               >
-                {state.antivirusActive ? (
-                  <><Shield className="w-3 h-3" /> Protected</>
-                ) : (
-                  <><ShieldOff className="w-3 h-3" /> Antivirus</>
-                )}
+                <Shield className="w-3.5 h-3.5" /> Antivirus
               </button>
             </div>
           </div>

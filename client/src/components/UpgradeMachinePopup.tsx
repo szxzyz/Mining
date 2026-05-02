@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Activity, HardDrive, Cpu, Loader2, ArrowLeft, X } from "lucide-react";
+import { Loader2, ArrowLeft, X, ChevronRight } from "lucide-react";
 import { showNotification } from "@/components/AppNotification";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -60,6 +60,12 @@ export default function UpgradeMachinePopup({ onClose }: UpgradeMachinePopupProp
   const nextCapacity = state.capacity + 24;
   const nextCpuMin = state.cpuDurationSec / 60 + 30;
 
+  const currentTitle =
+    subView === "mining" ? "Mining Speed"
+    : subView === "capacity" ? "Capacity"
+    : subView === "cpu" ? "CPU Duration"
+    : "Upgrade Machine";
+
   return (
     <AnimatePresence>
       <motion.div
@@ -79,30 +85,22 @@ export default function UpgradeMachinePopup({ onClose }: UpgradeMachinePopupProp
           transition={{ type: "spring", damping: 26, stiffness: 320 }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#1c1c1e]">
-            {subView ? (
-              <button
-                onClick={() => setSubView(null)}
-                className="h-8 px-3 rounded-xl bg-[#1c1c1e] text-white/60 text-xs font-bold active:scale-90 transition-transform"
-              >
-                Back
-              </button>
-            ) : (
-              <div className="w-12" />
-            )}
+          <div className="flex items-center justify-between px-4 pt-4 pb-3.5 border-b border-[#1c1c1e]">
+            <button
+              onClick={subView ? () => setSubView(null) : onClose}
+              className="h-8 w-8 rounded-xl bg-[#1c1c1e] flex items-center justify-center text-white/50 active:scale-90 transition-transform"
+            >
+              <ArrowLeft className="w-4 h-4" />
+            </button>
             <div className="text-center">
-              <p className="text-white font-black text-sm uppercase tracking-wider">
-                {subView === "mining" ? "Mining Speed" : subView === "capacity" ? "Capacity" : subView === "cpu" ? "CPU Duration" : "Upgrade Machine"}
-              </p>
-              {!subView && (
-                <p className="text-white/30 text-[10px] mt-0.5">Select what to upgrade</p>
-              )}
+              <p className="text-white font-black text-sm uppercase tracking-wider">{currentTitle}</p>
+              {!subView && <p className="text-white/25 text-[10px] mt-0.5">Balance: {state.balance.toFixed(2)} AXN</p>}
             </div>
             <button
               onClick={onClose}
-              className="h-8 px-3 rounded-xl bg-[#1c1c1e] text-white/60 text-xs font-bold active:scale-90 transition-transform"
+              className="h-8 w-8 rounded-xl bg-[#1c1c1e] flex items-center justify-center text-white/50 active:scale-90 transition-transform"
             >
-              Close
+              <X className="w-4 h-4" />
             </button>
           </div>
 
@@ -110,67 +108,60 @@ export default function UpgradeMachinePopup({ onClose }: UpgradeMachinePopupProp
             {!subView && (
               <motion.div
                 key="main"
-                initial={{ opacity: 0, x: -20 }}
+                initial={{ opacity: 0, x: -16 }}
                 animate={{ opacity: 1, x: 0 }}
-                exit={{ opacity: 0, x: -20 }}
-                transition={{ duration: 0.18 }}
-                className="px-5 py-5 space-y-3"
+                exit={{ opacity: 0, x: -16 }}
+                transition={{ duration: 0.15 }}
+                className="px-4 py-4 space-y-2"
               >
-                <UpgradeOption
-                  icon={<Activity className="w-5 h-5 text-[#F5C542]" />}
-                  title="Mining Speed"
-                  desc="Earn more AXN per second"
-                  currentValue={`${state.miningRate}/sec`}
-                  nextValue={`${nextMiningRate}/sec`}
-                  cost={state.upgMining}
-                  isMax={state.miningLevel >= 25}
+                <UpgradeRow
+                  label="Mining Speed"
+                  sublabel="Earn more AXN per second"
                   level={state.miningLevel}
                   levelColor="#F5C542"
+                  currentVal={`${state.miningRate}/s`}
+                  nextVal={`${nextMiningRate}/s`}
+                  cost={state.upgMining}
                   canAfford={canAffordMining}
+                  isMax={state.miningLevel >= 25}
                   onClick={() => setSubView("mining")}
                 />
-                <UpgradeOption
-                  icon={<HardDrive className="w-5 h-5 text-blue-400" />}
-                  title="Capacity"
-                  desc="Store more AXN before collecting"
-                  currentValue={`${state.capacity} AXN`}
-                  nextValue={`${nextCapacity} AXN`}
-                  cost={state.upgCapacity}
-                  isMax={state.capacityLevel >= 25}
+                <UpgradeRow
+                  label="Capacity"
+                  sublabel="Store more AXN before collecting"
                   level={state.capacityLevel}
                   levelColor="#60a5fa"
+                  currentVal={`${state.capacity} AXN`}
+                  nextVal={`${nextCapacity} AXN`}
+                  cost={state.upgCapacity}
                   canAfford={canAffordCapacity}
+                  isMax={state.capacityLevel >= 25}
                   onClick={() => setSubView("capacity")}
                 />
-                <UpgradeOption
-                  icon={<Cpu className="w-5 h-5 text-purple-400" />}
-                  title="CPU Duration"
-                  desc="Mine longer with better efficiency"
-                  currentValue={`${state.cpuDurationSec / 60} min`}
-                  nextValue={`${nextCpuMin} min`}
-                  cost={state.upgCpu}
-                  isMax={state.cpuLevel >= 25}
+                <UpgradeRow
+                  label="CPU Duration"
+                  sublabel="Mine longer each session"
                   level={state.cpuLevel}
                   levelColor="#c084fc"
+                  currentVal={`${state.cpuDurationSec / 60} min`}
+                  nextVal={`${nextCpuMin} min`}
+                  cost={state.upgCpu}
                   canAfford={canAffordCpu}
+                  isMax={state.cpuLevel >= 25}
                   onClick={() => setSubView("cpu")}
                 />
-                <p className="text-white/20 text-[10px] text-center pt-1">
-                  Balance: {state.balance.toFixed(2)} AXN
-                </p>
               </motion.div>
             )}
 
             {subView === "mining" && (
-              <SubView
+              <UpgradeDetail
                 key="mining"
-                icon={<Activity className="w-6 h-6 text-[#F5C542]" />}
                 description="Increase mining speed to earn more AXN per second."
                 currentLevel={state.miningLevel}
                 nextLevel={state.miningLevel + 1}
-                currentLabel="Your income"
+                currentLabel="Current rate"
                 currentStat={`${state.miningRate}/sec`}
-                improvedLabel="Improved income"
+                improvedLabel="New rate"
                 improvedStat={`${nextMiningRate}/sec`}
                 cost={state.upgMining}
                 canAfford={canAffordMining}
@@ -181,15 +172,14 @@ export default function UpgradeMachinePopup({ onClose }: UpgradeMachinePopupProp
             )}
 
             {subView === "capacity" && (
-              <SubView
+              <UpgradeDetail
                 key="capacity"
-                icon={<HardDrive className="w-6 h-6 text-blue-400" />}
-                description="Increase coin storage to accumulate more before collecting."
+                description="Increase coin storage to hold more AXN before collecting."
                 currentLevel={state.capacityLevel}
                 nextLevel={state.capacityLevel + 1}
                 currentLabel="Max capacity"
                 currentStat={`${state.capacity} AXN`}
-                improvedLabel="Increased capacity"
+                improvedLabel="New capacity"
                 improvedStat={`${nextCapacity} AXN`}
                 cost={state.upgCapacity}
                 canAfford={canAffordCapacity}
@@ -200,15 +190,14 @@ export default function UpgradeMachinePopup({ onClose }: UpgradeMachinePopupProp
             )}
 
             {subView === "cpu" && (
-              <SubView
+              <UpgradeDetail
                 key="cpu"
-                icon={<Cpu className="w-6 h-6 text-purple-400" />}
-                description="Increase mining duration for longer runs."
+                description="Increase mining duration for longer continuous sessions."
                 currentLevel={state.cpuLevel}
                 nextLevel={state.cpuLevel + 1}
-                currentLabel="Max mining time"
+                currentLabel="Session length"
                 currentStat={`${state.cpuDurationSec / 60} min`}
-                improvedLabel="Increased time"
+                improvedLabel="New session length"
                 improvedStat={`${nextCpuMin} min`}
                 cost={state.upgCpu}
                 canAfford={canAffordCpu}
@@ -224,59 +213,62 @@ export default function UpgradeMachinePopup({ onClose }: UpgradeMachinePopupProp
   );
 }
 
-interface UpgradeOptionProps {
-  icon: React.ReactNode;
-  title: string;
-  desc: string;
-  currentValue: string;
-  nextValue: string;
-  cost: number;
-  isMax: boolean;
+interface UpgradeRowProps {
+  label: string;
+  sublabel: string;
   level: number;
   levelColor: string;
+  currentVal: string;
+  nextVal: string;
+  cost: number;
   canAfford: boolean;
+  isMax: boolean;
   onClick: () => void;
 }
 
-function UpgradeOption({ icon, title, desc, currentValue, nextValue, cost, isMax, level, levelColor, canAfford, onClick }: UpgradeOptionProps) {
+function UpgradeRow({ label, sublabel, level, levelColor, currentVal, nextVal, cost, canAfford, isMax, onClick }: UpgradeRowProps) {
   return (
     <button
       onClick={onClick}
       disabled={isMax}
-      className="w-full flex items-center gap-4 rounded-2xl px-4 py-3.5 text-left active:scale-[0.98] transition-all disabled:opacity-50"
-      style={{ background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.05)' }}
+      className="w-full text-left rounded-2xl px-4 py-3.5 active:scale-[0.98] transition-all disabled:opacity-50"
+      style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.05)' }}
     >
-      <div className="w-10 h-10 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">
-        {icon}
-      </div>
-      <div className="flex-1 min-w-0">
-        <div className="flex items-center gap-2">
-          <p className="text-white text-sm font-bold">{title}</p>
-          <span className="text-[10px] font-black px-1.5 py-0.5 rounded-md" style={{ color: levelColor, background: `${levelColor}18` }}>
-            Lv.{level}
-          </span>
+      <div className="flex items-center justify-between">
+        <div className="flex-1 min-w-0">
+          <div className="flex items-center gap-2 mb-0.5">
+            <span className="text-white text-sm font-bold">{label}</span>
+            <span
+              className="text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wide"
+              style={{ color: levelColor, background: `${levelColor}18` }}
+            >
+              Lv.{level}
+            </span>
+          </div>
+          <p className="text-white/35 text-xs">{sublabel}</p>
+          <p className="text-white/25 text-[10px] mt-1 tabular-nums">
+            {currentVal}
+            {!isMax && (
+              <span style={{ color: `${levelColor}80` }}> → {nextVal}</span>
+            )}
+          </p>
         </div>
-        <p className="text-white/40 text-xs mt-0.5">{desc}</p>
-        <p className="text-white/30 text-[10px] mt-1 tabular-nums">
-          {currentValue}
-          {!isMax && <span style={{ color: `${levelColor}88` }}> → {nextValue}</span>}
-        </p>
-      </div>
-      <div className="flex-shrink-0 text-right">
-        {isMax ? (
-          <span className="text-[10px] font-black text-[#F5C542]/60 uppercase">MAX</span>
-        ) : (
-          <span className={`text-xs font-black tabular-nums ${canAfford ? "text-[#F5C542]" : "text-white/30"}`}>
-            {cost} AXN
-          </span>
-        )}
+        <div className="flex items-center gap-1.5 flex-shrink-0 ml-3">
+          {isMax ? (
+            <span className="text-[10px] font-black text-[#F5C542]/50 uppercase">MAX</span>
+          ) : (
+            <span className={`text-xs font-black tabular-nums ${canAfford ? "text-[#F5C542]" : "text-white/30"}`}>
+              {cost} AXN
+            </span>
+          )}
+          {!isMax && <ChevronRight className="w-3.5 h-3.5 text-white/20" />}
+        </div>
       </div>
     </button>
   );
 }
 
-interface SubViewProps {
-  icon: React.ReactNode;
+interface UpgradeDetailProps {
   description: string;
   currentLevel: number;
   nextLevel: number;
@@ -291,32 +283,26 @@ interface SubViewProps {
   onUpgrade: () => void;
 }
 
-function SubView({
-  icon, description,
+function UpgradeDetail({
+  description,
   currentLevel, nextLevel,
   currentLabel, currentStat,
   improvedLabel, improvedStat,
   cost, canAfford, isMax, isPending, onUpgrade,
-}: SubViewProps) {
+}: UpgradeDetailProps) {
   return (
     <motion.div
-      key="sub"
-      initial={{ opacity: 0, x: 20 }}
+      initial={{ opacity: 0, x: 16 }}
       animate={{ opacity: 1, x: 0 }}
-      exit={{ opacity: 0, x: 20 }}
-      transition={{ duration: 0.18 }}
-      className="px-5 py-5 space-y-4"
+      exit={{ opacity: 0, x: 16 }}
+      transition={{ duration: 0.15 }}
+      className="px-4 py-4 space-y-3"
     >
-      <div className="flex items-start gap-4">
-        <div className="w-12 h-12 rounded-2xl bg-white/5 border border-white/10 flex items-center justify-center flex-shrink-0">
-          {icon}
-        </div>
-        <p className="text-white/50 text-sm leading-relaxed pt-1">{description}</p>
-      </div>
+      <p className="text-white/40 text-xs leading-relaxed">{description}</p>
 
-      <div className="rounded-2xl px-4 py-4 space-y-3" style={{ background: '#1c1c1e' }}>
+      <div className="rounded-2xl px-4 py-4 space-y-3" style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.05)' }}>
         <div className="flex items-center justify-between">
-          <span className="text-white/30 text-xs font-semibold uppercase tracking-wider">Level up</span>
+          <span className="text-white/30 text-xs font-bold uppercase tracking-wider">Level</span>
           <div className="flex items-center gap-2">
             <span className="text-white/50 text-sm font-black">{currentLevel}</span>
             <span className="text-white/20 text-xs">→</span>
@@ -325,28 +311,28 @@ function SubView({
         </div>
         <div className="h-px bg-white/5" />
         <div className="flex items-center justify-between">
-          <span className="text-white/40 text-xs">{currentLabel}</span>
+          <span className="text-white/35 text-xs">{currentLabel}</span>
           <span className="text-white text-xs font-bold tabular-nums">{currentStat}</span>
         </div>
         <div className="flex items-center justify-between">
-          <span className="text-[#F5C542]/70 text-xs">{improvedLabel}</span>
+          <span className="text-[#F5C542]/60 text-xs">{improvedLabel}</span>
           <span className="text-[#F5C542] text-xs font-black tabular-nums">{improvedStat}</span>
         </div>
       </div>
 
       {isMax ? (
-        <div className="w-full h-13 flex items-center justify-center rounded-2xl bg-white/5 border border-white/10">
-          <span className="text-white/30 text-sm font-black uppercase tracking-wider">Maximum Level</span>
+        <div className="w-full h-12 flex items-center justify-center rounded-2xl" style={{ background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.06)' }}>
+          <span className="text-white/25 text-sm font-black uppercase tracking-wider">Maximum Level Reached</span>
         </div>
       ) : (
         <button
           onClick={onUpgrade}
           disabled={isPending || !canAfford}
-          className="w-full h-14 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+          className="w-full h-12 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
           style={canAfford ? {
             background: "linear-gradient(135deg, #F5C542, #d4920a)",
             color: "#000",
-            boxShadow: "0 0 20px rgba(245,197,66,0.3)",
+            boxShadow: "0 0 20px rgba(245,197,66,0.25)",
           } : {
             background: "#1c1c1e",
             border: "1px solid rgba(255,255,255,0.08)",
@@ -354,11 +340,11 @@ function SubView({
           }}
         >
           {isPending ? (
-            <Loader2 className="w-5 h-5 animate-spin" />
+            <Loader2 className="w-4 h-4 animate-spin" />
           ) : canAfford ? (
             `Upgrade — ${cost} AXN`
           ) : (
-            `Not enough AXN (need ${cost})`
+            `Need ${cost} AXN`
           )}
         </button>
       )}

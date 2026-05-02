@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { forwardRef } from "react";
-import { AlignJustify, UserRoundPlus, Wallet } from "lucide-react";
+import { UserRoundPlus, Wallet } from "lucide-react";
 import { BsLightningChargeFill } from "react-icons/bs";
 
 interface HeaderProps {
@@ -17,6 +17,9 @@ const Header = forwardRef<HTMLDivElement, HeaderProps>(
     });
 
     const satBalance = Math.floor(parseFloat((user as any)?.balance || "0"));
+    const firstName: string = user?.firstName || user?.username || "You";
+    const profileImageUrl: string | null = user?.profileImageUrl || null;
+    const initials = firstName.slice(0, 2).toUpperCase();
 
     return (
       <div
@@ -26,12 +29,24 @@ const Header = forwardRef<HTMLDivElement, HeaderProps>(
       >
         <div className="max-w-md mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
 
-          {/* Left — hamburger button */}
+          {/* Left — profile photo avatar button */}
           <button
             onClick={onMenuOpen}
-            className="w-10 h-10 rounded-full bg-[#1c1c1e] flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform"
+            className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform"
+            style={{ background: "#1c1c1e" }}
           >
-            <AlignJustify className="w-4.5 h-4.5 text-white" strokeWidth={2} style={{ width: 18, height: 18 }} />
+            {profileImageUrl ? (
+              <img
+                src={profileImageUrl}
+                alt={firstName}
+                className="w-full h-full object-cover"
+                onError={(e) => {
+                  (e.target as HTMLImageElement).style.display = "none";
+                }}
+              />
+            ) : (
+              <span className="text-white font-black text-sm select-none">{initials}</span>
+            )}
           </button>
 
           {/* Center — sparkle + balance pill */}
