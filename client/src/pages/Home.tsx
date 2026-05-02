@@ -1098,7 +1098,7 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <main className="max-w-md mx-auto px-4 pb-24" style={{ paddingTop: headerHeight + 8 }}>
+      <main className="max-w-md mx-auto px-4 pb-20" style={{ paddingTop: headerHeight + 8 }}>
         <MiningMachinePanel />
       </main>
 
