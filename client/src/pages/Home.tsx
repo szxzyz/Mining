@@ -1107,14 +1107,15 @@ export default function Home() {
         <div className="mb-4 relative">
 
           <div className="w-full">
-              {/* AXN MINING MACHINE */}
-              <p className="text-center text-[10px] font-black uppercase tracking-[0.15em] text-white/30 mb-3">AXN Mining Machine</p>
               <MiningMachinePanel />
           </div>
         </div>
 
+        {/* Footer label */}
+        <p className="text-center text-[10px] font-black uppercase tracking-[0.15em] text-white/20 mt-3 mb-2">AXN Mining Machine</p>
+
         {/* Footer spacer */}
-        <div className="mt-6 mb-2" />
+        <div className="mt-4 mb-2" />
 
       </main>
 
@@ -1273,9 +1274,10 @@ export default function Home() {
             onClick={() => setUpgradePopupOpen(true)}
             className="w-full h-14 flex items-center justify-center gap-2.5 font-black text-sm uppercase tracking-wider transition-all active:scale-[0.97] rounded-2xl"
             style={{
-              background: 'linear-gradient(135deg, #FFD970 0%, #F5C542 45%, #d4920a 100%)',
-              color: '#000',
-              boxShadow: '0 6px 24px rgba(245,197,66,0.4), 0 2px 8px rgba(212,146,10,0.3), inset 0 1px 0 rgba(255,255,255,0.4)',
+              background: '#1c1c1e',
+              color: '#F5C542',
+              border: '1px solid rgba(245,197,66,0.25)',
+              boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
             }}
           >
             <span className="text-base">⚙️</span>
