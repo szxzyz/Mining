@@ -24,7 +24,6 @@ import { AnimatePresence, motion } from "framer-motion";
 import WithdrawalPopup from "@/components/WithdrawalPopup";
 import MenuPopup from "@/components/MenuPopup";
 import MiningMachinePanel from "@/components/MiningMachinePanel";
-import UpgradeMachinePopup from "@/components/UpgradeMachinePopup";
 
 
 // Unified Task Interface
@@ -77,7 +76,6 @@ export default function Home() {
   const queryClient = useQueryClient();
 
   const [promoPopupOpen, setPromoPopupOpen] = useState(false);
-  const [upgradePopupOpen, setUpgradePopupOpen] = useState(false);
   const [withdrawPopupOpen, setWithdrawPopupOpen] = useState(false);
   const [miningPausedBanner, setMiningPausedBanner] = useState(false);
   const [convertPopupOpen, setConvertPopupOpen] = useState(false);
@@ -1265,37 +1263,6 @@ export default function Home() {
 
 
 
-      {/* Bottom Navigation — single Upgrade Machine CTA */}
-      <div className="fixed bottom-0 left-0 right-0 z-50 flex justify-center pointer-events-none">
-        <div className="w-full max-w-md relative pointer-events-auto px-5 pb-4 pt-3"
-          style={{ paddingBottom: 'calc(env(safe-area-inset-bottom, 0px) + 12px)' }}
-        >
-          {/* Ambient glow */}
-          <div
-            aria-hidden
-            className="absolute left-1/2 -translate-x-1/2 -top-6 w-60 h-12 rounded-full pointer-events-none"
-            style={{
-              background: 'radial-gradient(closest-side, rgba(245,197,66,0.18), rgba(245,197,66,0) 70%)',
-              filter: 'blur(10px)',
-            }}
-          />
-          <button
-            onClick={() => setUpgradePopupOpen(true)}
-            className="w-full h-14 flex items-center justify-center gap-2.5 font-black text-sm uppercase tracking-wider transition-all active:scale-[0.97] rounded-2xl"
-            style={{
-              background: '#1c1c1e',
-              color: '#F5C542',
-              border: '1px solid rgba(245,197,66,0.25)',
-              boxShadow: '0 4px 20px rgba(0,0,0,0.4)',
-            }}
-          >
-            <span className="text-base">⚙️</span>
-            Upgrade Machine
-          </button>
-        </div>
-      </div>
-
-      {upgradePopupOpen && <UpgradeMachinePopup onClose={() => setUpgradePopupOpen(false)} />}
 
       {settingsOpen && (
         <SettingsPopup 
