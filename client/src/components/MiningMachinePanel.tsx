@@ -3,14 +3,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, Shield, ShieldOff, Cpu, HardDrive, Activity,
-  Wrench, Play, Settings,
-  Loader2, AlertTriangle, ChevronRight
+  Wrench, Play, AlertTriangle, Loader2, ChevronRight, Settings
 } from "lucide-react";
 import { showNotification } from "@/components/AppNotification";
 import { apiRequest } from "@/lib/queryClient";
 import RepairPopup from "@/components/RepairPopup";
 import AntivirusPopup, { AV_DURATION_MS } from "@/components/AntivirusPopup";
 import UpgradeMachinePopup from "@/components/UpgradeMachinePopup";
+import EnergyPopup from "@/components/EnergyPopup";
 
 interface MachineState {
   miningLevel: number;
@@ -76,11 +76,12 @@ function makelog(miningRate: number, mined: number): string {
   return `${ts} stratum: accepted  diff=512K  ${hs}MH`;
 }
 
-function MiningTerminal({ isMining, miningRate, mined, machineStopped }: {
+function MiningTerminal({ isMining, miningRate, mined, machineStopped, noEnergy }: {
   isMining: boolean;
   miningRate: number;
   mined: number;
   machineStopped: boolean;
+  noEnergy: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [logs, setLogs] = useState<string[]>([]);
@@ -114,6 +115,8 @@ function MiningTerminal({ isMining, miningRate, mined, machineStopped }: {
           const rng = Math.random();
           ctx.fillStyle = machineStopped
             ? rng > 0.93 ? "#fff" : rng > 0.55 ? "#ef4444" : "#7f1d1d"
+            : noEnergy
+            ? rng > 0.93 ? "#fff" : rng > 0.55 ? "#F5C542" : "#78540a"
             : rng > 0.93 ? "#fff" : rng > 0.55 ? "#39ff14" : "#00960a";
           ctx.font = `${fontSize}px monospace`;
           ctx.fillText(ch, x, y);
@@ -125,7 +128,7 @@ function MiningTerminal({ isMining, miningRate, mined, machineStopped }: {
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [machineStopped]);
+  }, [machineStopped, noEnergy]);
 
   useEffect(() => {
     if (!isMining) return;
@@ -152,6 +155,13 @@ function MiningTerminal({ isMining, miningRate, mined, machineStopped }: {
             <AlertTriangle className="w-6 h-6 text-red-400" />
             <span style={{ color: "#ef4444", fontSize: 11, fontWeight: 700, textAlign: "center" }}>
               Machine stopped — repair required to resume mining
+            </span>
+          </div>
+        ) : noEnergy ? (
+          <div className="flex-1 flex flex-col items-center justify-center gap-2">
+            <Zap className="w-6 h-6 text-[#F5C542]" />
+            <span style={{ color: "#F5C542", fontSize: 11, fontWeight: 700, textAlign: "center" }}>
+              Energy required — refill to continue mining
             </span>
           </div>
         ) : !isMining ? (
@@ -189,8 +199,9 @@ export default function MiningMachinePanel() {
   const [repairOpen, setRepairOpen] = useState(false);
   const [antivirusOpen, setAntivirusOpen] = useState(false);
   const [upgradeOpen, setUpgradeOpen] = useState(false);
+  const [energyOpen, setEnergyOpen] = useState(false);
 
-  const { data: state, isLoading } = useQuery<MachineState>({
+  const { data: state } = useQuery<MachineState>({
     queryKey: ["/api/axn-mining/state"],
     refetchInterval: 15000,
     retry: false,
@@ -305,26 +316,33 @@ export default function MiningMachinePanel() {
     onError: (e: any) => showNotification(e.message || "Nothing to collect", "error"),
   });
 
-  const refillMutation = useMutation({
-    mutationFn: () => apiRequest("POST", "/api/axn-mining/refill-energy").then(r => r.json()),
-    onSuccess: (d) => { showNotification(d.message, "success"); invalidate(); },
-    onError: (e: any) => showNotification(e.message || "Failed", "error"),
-  });
-
-  if (isLoading) {
+  if (!state) {
     return (
-      <div className="flex items-center justify-center py-12">
-        <Loader2 className="w-6 h-6 animate-spin text-[#F5C542]" />
+      <div className="w-full space-y-3">
+        <p className="text-center text-[10px] font-black uppercase tracking-[0.15em] text-white/30 mb-1">AXN Mining Machine</p>
+        <div className="bg-[#000000] border border-[#1c1c1e] rounded-2xl overflow-hidden animate-pulse">
+          <div className="h-[130px] bg-white/[0.02]" />
+          <div className="px-4 py-4 space-y-3">
+            <div className="h-2 bg-white/[0.04] rounded-full" />
+            <div className="grid grid-cols-3 gap-2">
+              {[0,1,2].map(i => <div key={i} className="h-14 bg-white/[0.04] rounded-xl" />)}
+            </div>
+            <div className="h-12 bg-white/[0.04] rounded-xl" />
+            <div className="grid grid-cols-2 gap-2">
+              <div className="h-11 bg-white/[0.04] rounded-xl" />
+              <div className="h-11 bg-white/[0.04] rounded-xl" />
+            </div>
+          </div>
+        </div>
       </div>
     );
   }
-
-  if (!state) return null;
 
   const capacityPct = Math.min(100, (localMined / state.capacity) * 100);
   const healthColor = state.machineHealth > 60 ? "#22c55e" : state.machineHealth > 30 ? "#f59e0b" : "#ef4444";
   const canClaim = localMined >= 0.01;
   const machineStopped = state.machineHealth <= 0;
+  const noEnergy = !state.hasEnergy && !state.cpuRunning;
 
   const energyPct = state.cpuRunning
     ? Math.max(0, Math.round((cpuCountdown / state.cpuDurationSec) * 100))
@@ -334,19 +352,21 @@ export default function MiningMachinePanel() {
 
   return (
     <div className="w-full space-y-3">
-      {/* AXN Mining Machine Title */}
       <p className="text-center text-[10px] font-black uppercase tracking-[0.15em] text-white/30 mb-1">AXN Mining Machine</p>
 
       <div className="bg-[#000000] border border-[#1c1c1e] rounded-2xl overflow-hidden">
 
-        {/* Top: Antivirus Status Bar */}
+        {/* Antivirus Status Bar — only protects balance */}
         <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-[#1c1c1e]">
           {state.antivirusActive ? (
             <div className="flex items-center gap-2">
               <Shield className="w-3.5 h-3.5 text-green-400" />
               <span className="text-green-400 text-[11px] font-black uppercase tracking-wider">
-                Antivirus active — no threats detected
+                Antivirus active — balance protected
               </span>
+              {avSecondsLeft > 0 && (
+                <span className="text-green-400/50 text-[10px] tabular-nums">({formatTime(avSecondsLeft)})</span>
+              )}
             </div>
           ) : (
             <button
@@ -355,13 +375,13 @@ export default function MiningMachinePanel() {
             >
               <ShieldOff className="w-3.5 h-3.5 text-red-400 animate-pulse" />
               <span className="text-red-400 text-[11px] font-black uppercase tracking-wider">
-                Virus detected — machine at risk
+                No antivirus — balance at risk
               </span>
             </button>
           )}
         </div>
 
-        {/* Level Labels Row — compact */}
+        {/* Level Labels Row */}
         <div className="flex items-center justify-center gap-3 px-4 py-2 border-b border-[#1c1c1e]">
           <div className="flex items-center gap-1">
             <Activity className="w-3 h-3 text-[#F5C542]/60" />
@@ -382,13 +402,14 @@ export default function MiningMachinePanel() {
           </div>
         </div>
 
-        {/* Matrix Terminal Log Display */}
+        {/* Matrix Terminal */}
         <div className="px-3 pt-3 pb-2">
           <MiningTerminal
             isMining={isMining}
             miningRate={state.miningRate}
             mined={localMined}
             machineStopped={machineStopped}
+            noEnergy={noEnergy && !machineStopped}
           />
         </div>
 
@@ -431,7 +452,11 @@ export default function MiningMachinePanel() {
               </p>
               <p className="text-white/30 text-[9px] uppercase tracking-wide mt-0.5">CPU</p>
             </div>
-            <div className="bg-[#1c1c1e] rounded-xl p-2.5 text-center">
+            {/* Health — always decreases naturally, unrelated to antivirus */}
+            <button
+              onClick={() => setRepairOpen(true)}
+              className="bg-[#1c1c1e] rounded-xl p-2.5 text-center active:scale-95 transition-transform"
+            >
               <Wrench className="w-3.5 h-3.5 mx-auto mb-1" style={{ color: healthColor }} />
               <p className="text-xs font-black tabular-nums" style={{ color: healthColor }}>
                 {state.machineHealth}%
@@ -443,11 +468,14 @@ export default function MiningMachinePanel() {
                   style={{ width: `${state.machineHealth}%`, background: healthColor }}
                 />
               </div>
-            </div>
+            </button>
           </div>
 
           {/* Energy Bar */}
-          <div className="flex items-center gap-3 bg-[#1c1c1e] rounded-xl px-3 py-2.5 mb-4">
+          <div
+            className="flex items-center gap-3 bg-[#1c1c1e] rounded-xl px-3 py-2.5 mb-4 cursor-pointer active:scale-[0.99] transition-transform"
+            onClick={() => { if (!state.cpuRunning && !state.hasEnergy) setEnergyOpen(true); }}
+          >
             <div className="flex items-center gap-1.5 flex-1">
               <Zap
                 className="w-3.5 h-3.5 flex-shrink-0"
@@ -484,18 +512,17 @@ export default function MiningMachinePanel() {
                     ? `⚡ Mining — ${energyPct}% remaining`
                     : energyPct === 100
                     ? '⚡ Full — Ready to mine'
-                    : '🪫 Empty — Refill to continue'}
+                    : '🪫 Empty — Tap to refill'}
                 </p>
               </div>
             </div>
             {!state.cpuRunning && !state.hasEnergy && (
               <button
-                onClick={() => refillMutation.mutate()}
-                disabled={refillMutation.isPending}
-                className="flex-shrink-0 h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider text-black active:scale-95 transition-all disabled:opacity-50"
+                onClick={(e) => { e.stopPropagation(); setEnergyOpen(true); }}
+                className="flex-shrink-0 h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider text-black active:scale-95 transition-all"
                 style={{ background: 'linear-gradient(135deg,#F5C542,#d4920a)' }}
               >
-                {refillMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : `+${state.energyCost} AXN`}
+                Refill
               </button>
             )}
           </div>
@@ -504,24 +531,33 @@ export default function MiningMachinePanel() {
           <div className="space-y-2">
             <div className="grid grid-cols-2 gap-2">
               <button
-                onClick={() => startCpuMutation.mutate()}
+                onClick={() => {
+                  if (!state.hasEnergy && !state.cpuRunning && state.machineHealth > 0) {
+                    setEnergyOpen(true);
+                    return;
+                  }
+                  startCpuMutation.mutate();
+                }}
                 disabled={
                   startCpuMutation.isPending ||
                   state.cpuRunning ||
-                  !state.hasEnergy ||
                   state.machineHealth <= 0
                 }
                 className="h-11 rounded-xl flex items-center justify-center gap-1.5 font-black text-xs uppercase tracking-widest transition-all active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
                 style={
-                  !state.cpuRunning && state.hasEnergy && state.machineHealth > 0
-                    ? { background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: '#fff', boxShadow: '0 0 14px rgba(59,130,246,0.3)' }
+                  !state.cpuRunning && state.machineHealth > 0
+                    ? state.hasEnergy
+                      ? { background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: '#fff', boxShadow: '0 0 14px rgba(59,130,246,0.3)' }
+                      : { background: 'linear-gradient(135deg,#F5C542,#d4920a)', color: '#000' }
                     : { background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.25)' }
                 }
               >
                 {startCpuMutation.isPending ? (
-                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                  <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
                 ) : state.cpuRunning ? (
                   <><Cpu className="w-3.5 h-3.5" /> Running</>
+                ) : !state.hasEnergy && state.machineHealth > 0 ? (
+                  <><Zap className="w-3.5 h-3.5" /> Refill Energy</>
                 ) : (
                   <><Play className="w-3.5 h-3.5" /> Start Mining</>
                 )}
@@ -541,10 +577,11 @@ export default function MiningMachinePanel() {
                   color: 'rgba(255,255,255,0.25)',
                 }}
               >
-                {claimMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '⬇ Collect AXN'}
+                {claimMutation.isPending ? <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" /> : '⬇ Collect AXN'}
               </button>
             </div>
 
+            {/* Secondary: Repair / Antivirus / Upgrade — original card list style */}
             <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)', background: '#141414' }}>
               <button
                 onClick={() => setRepairOpen(true)}
@@ -609,6 +646,13 @@ export default function MiningMachinePanel() {
       )}
       {upgradeOpen && (
         <UpgradeMachinePopup onClose={() => setUpgradeOpen(false)} />
+      )}
+      {energyOpen && (
+        <EnergyPopup
+          energyCost={state.energyCost}
+          balance={state.balance}
+          onClose={() => setEnergyOpen(false)}
+        />
       )}
     </div>
   );

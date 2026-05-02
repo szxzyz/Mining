@@ -1,6 +1,6 @@
 import { useQuery } from "@tanstack/react-query";
 import { forwardRef } from "react";
-import { UserRoundPlus, Wallet } from "lucide-react";
+import { UserPlus2, ArrowDownToLine } from "lucide-react";
 import { BsLightningChargeFill } from "react-icons/bs";
 
 interface HeaderProps {
@@ -18,7 +18,12 @@ const Header = forwardRef<HTMLDivElement, HeaderProps>(
 
     const satBalance = Math.floor(parseFloat((user as any)?.balance || "0"));
     const firstName: string = user?.firstName || user?.username || "You";
-    const profileImageUrl: string | null = user?.profileImageUrl || null;
+
+    const profileImageUrl: string | null =
+      user?.profileImageUrl ||
+      (typeof window !== "undefined" && (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.photo_url) ||
+      null;
+
     const initials = firstName.slice(0, 2).toUpperCase();
 
     return (
@@ -29,7 +34,7 @@ const Header = forwardRef<HTMLDivElement, HeaderProps>(
       >
         <div className="max-w-md mx-auto px-4 py-2.5 flex items-center justify-between gap-3">
 
-          {/* Left — profile photo avatar button */}
+          {/* Left — profile photo */}
           <button
             onClick={onMenuOpen}
             className="w-10 h-10 rounded-full overflow-hidden flex items-center justify-center flex-shrink-0 active:scale-95 transition-transform"
@@ -41,7 +46,15 @@ const Header = forwardRef<HTMLDivElement, HeaderProps>(
                 alt={firstName}
                 className="w-full h-full object-cover"
                 onError={(e) => {
-                  (e.target as HTMLImageElement).style.display = "none";
+                  const target = e.target as HTMLImageElement;
+                  target.style.display = "none";
+                  const parent = target.parentElement;
+                  if (parent) {
+                    const span = document.createElement("span");
+                    span.className = "text-white font-black text-sm select-none";
+                    span.textContent = initials;
+                    parent.appendChild(span);
+                  }
                 }}
               />
             ) : (
@@ -49,7 +62,7 @@ const Header = forwardRef<HTMLDivElement, HeaderProps>(
             )}
           </button>
 
-          {/* Center — sparkle + balance pill */}
+          {/* Center — balance pill */}
           <button
             onClick={onWithdrawOpen}
             className="flex-1 flex items-center justify-center gap-2 h-10 bg-[#1c1c1e] rounded-full px-4 active:scale-95 transition-transform"
@@ -61,20 +74,28 @@ const Header = forwardRef<HTMLDivElement, HeaderProps>(
             <span className="text-white/40 text-xs font-bold uppercase tracking-wide">AXN</span>
           </button>
 
-          {/* Right — two-icon pill */}
+          {/* Right — icon pill */}
           <div className="flex items-center gap-0 bg-[#1c1c1e] rounded-full h-10 overflow-hidden flex-shrink-0">
             <button
               onClick={onInviteOpen}
               className="w-12 h-10 flex items-center justify-center active:bg-white/10 transition-colors"
             >
-              <UserRoundPlus className="text-white" strokeWidth={1.8} style={{ width: 18, height: 18 }} />
+              <UserPlus2
+                className="text-white"
+                strokeWidth={1.6}
+                style={{ width: 18, height: 18 }}
+              />
             </button>
             <div className="w-px h-5 bg-white/10" />
             <button
               onClick={onWithdrawOpen}
               className="w-12 h-10 flex items-center justify-center active:bg-white/10 transition-colors"
             >
-              <Wallet className="text-white/70" strokeWidth={1.8} style={{ width: 17, height: 17 }} />
+              <ArrowDownToLine
+                className="text-white/70"
+                strokeWidth={1.6}
+                style={{ width: 17, height: 17 }}
+              />
             </button>
           </div>
 

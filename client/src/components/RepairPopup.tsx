@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Wrench, Loader2, Clock, Play, X } from "lucide-react";
+import { Wrench, Loader2, Clock, Play, Activity } from "lucide-react";
 import { showNotification } from "@/components/AppNotification";
 import { apiRequest } from "@/lib/queryClient";
 
@@ -95,7 +95,7 @@ export default function RepairPopup({ repairCost, machineHealth, balance, onClos
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
+        <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
 
         <motion.div
           className="relative w-full max-w-sm rounded-3xl overflow-hidden"
@@ -106,27 +106,27 @@ export default function RepairPopup({ repairCost, machineHealth, balance, onClos
           transition={{ type: "spring", damping: 26, stiffness: 320 }}
         >
           {/* Header */}
-          <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#1c1c1e]">
-            <div className="flex items-center gap-2">
-              <div className="w-7 h-7 rounded-xl bg-red-500/15 flex items-center justify-center">
-                <Wrench className="w-3.5 h-3.5 text-red-400" />
-              </div>
-              <div>
-                <p className="text-white font-black text-sm uppercase tracking-wider">Repair Machine</p>
-                <p className="text-white/30 text-[10px]">Restore health to 100%</p>
-              </div>
+          <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-[#1c1c1e]">
+            <div className="w-9 h-9 rounded-2xl bg-orange-500/15 flex items-center justify-center flex-shrink-0">
+              <Wrench className="w-4 h-4 text-orange-400" />
             </div>
-            <div className="w-8" />
+            <div className="flex-1 min-w-0">
+              <p className="text-white font-black text-sm uppercase tracking-wider">Repair Machine</p>
+              <p className="text-white/35 text-[11px] mt-0.5">Restore machine health to 100%</p>
+            </div>
           </div>
 
-          <div className="px-5 py-5 space-y-3">
+          <div className="px-5 py-4 space-y-2.5">
             {/* Health indicator */}
-            <div className="bg-[#1c1c1e] rounded-2xl px-4 py-3">
+            <div className="bg-[#141414] border border-white/5 rounded-2xl px-4 py-3">
               <div className="flex items-center justify-between mb-2">
-                <span className="text-white/40 text-xs">Current Health</span>
+                <div className="flex items-center gap-2">
+                  <Activity className="w-3.5 h-3.5 text-white/25" />
+                  <span className="text-white/40 text-xs">Current Health</span>
+                </div>
                 <span className="font-black text-sm tabular-nums" style={{ color: healthColor }}>{machineHealth}%</span>
               </div>
-              <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
                 <div
                   className="h-full rounded-full transition-all duration-500"
                   style={{ width: `${machineHealth}%`, background: healthColor }}
@@ -134,35 +134,55 @@ export default function RepairPopup({ repairCost, machineHealth, balance, onClos
               </div>
             </div>
 
+            {/* Cooldown row */}
+            <div className="bg-[#141414] border border-white/5 rounded-2xl px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-white/25" />
+                <span className="text-white/40 text-xs">Free Cooldown</span>
+              </div>
+              {cooldown > 0 ? (
+                <span className="text-white/50 font-black text-sm tabular-nums">{formatCooldown(cooldown)}</span>
+              ) : (
+                <span className="text-green-400 font-black text-sm">Ready</span>
+              )}
+            </div>
+
+            {/* Info note */}
+            <div className="bg-[#141414] border border-white/5 rounded-2xl px-4 py-3">
+              <p className="text-white/30 text-[11px] leading-relaxed">
+                Machine health <span className="text-white/50">decreases over time</span> automatically. Repair to restore full mining efficiency.
+              </p>
+            </div>
+
             {isFullHealth ? (
-              <div className="w-full h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
-                <span className="text-green-400 font-black text-sm">Machine is already at 100%</span>
+              <div className="w-full h-12 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center">
+                <span className="text-green-400 font-black text-sm">Machine is at 100% health</span>
               </div>
             ) : (
               <>
                 <button
                   onClick={handleFreeRepair}
                   disabled={cooldown > 0 || adWatching || repairFreeMutation.isPending}
-                  className="w-full h-14 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
-                  style={{ background: '#1c1c1e', border: '1px solid #2a2a2a', color: 'white' }}
+                  className="w-full h-12 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{ background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.08)', color: 'white' }}
                 >
                   {repairFreeMutation.isPending || adWatching ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
                   ) : cooldown > 0 ? (
-                    <><Clock className="w-4 h-4 text-white/40" /> <span className="text-white/40">Free in {formatCooldown(cooldown)}</span></>
+                    <><Clock className="w-4 h-4 text-white/30" /> <span className="text-white/40">Free in {formatCooldown(cooldown)}</span></>
                   ) : (
-                    <><Play className="w-4 h-4 text-white/70" /> Free — Watch Ad</>
+                    <><Play className="w-4 h-4 text-white/60" /> Free — Watch Ad</>
                   )}
                 </button>
 
                 <button
                   onClick={() => repairPaidMutation.mutate()}
                   disabled={repairPaidMutation.isPending || !canAfford}
-                  className="w-full h-14 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  className="w-full h-12 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
                   style={canAfford ? {
-                    background: "linear-gradient(135deg, #ef4444, #b91c1c)",
-                    color: "#fff",
-                    boxShadow: "0 0 20px rgba(239,68,68,0.2)",
+                    background: "linear-gradient(135deg, #F5C542, #d4920a)",
+                    color: "#000",
+                    boxShadow: "0 0 18px rgba(245,197,66,0.2)",
                   } : {
                     background: "#1c1c1e",
                     border: "1px solid rgba(255,255,255,0.08)",
@@ -170,26 +190,20 @@ export default function RepairPopup({ repairCost, machineHealth, balance, onClos
                   }}
                 >
                   {repairPaidMutation.isPending ? (
-                    <Loader2 className="w-5 h-5 animate-spin" />
+                    <Loader2 className="w-4 h-4 animate-spin" />
                   ) : canAfford ? (
                     `Pay ${repairCost} AXN`
                   ) : (
                     `Need ${repairCost} AXN`
                   )}
                 </button>
-
-                {cooldown > 0 && (
-                  <p className="text-white/20 text-[10px] text-center">
-                    Free cooldown: {formatCooldown(cooldown)} remaining
-                  </p>
-                )}
               </>
             )}
 
             <button
               onClick={onClose}
-              className="w-full h-11 rounded-2xl font-bold text-sm text-white/50 active:scale-[0.97] transition-transform"
-              style={{ background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.06)' }}
+              className="w-full h-11 rounded-2xl font-bold text-sm text-white/40 active:scale-[0.97] transition-transform"
+              style={{ background: '#141414', border: '1px solid rgba(255,255,255,0.05)' }}
             >
               Close
             </button>
