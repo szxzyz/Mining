@@ -3,13 +3,14 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, Shield, ShieldOff, Cpu, HardDrive, Activity,
-  Wrench, Play,
-  Loader2, AlertTriangle
+  Wrench, Play, Settings,
+  Loader2, AlertTriangle, ChevronRight
 } from "lucide-react";
 import { showNotification } from "@/components/AppNotification";
 import { apiRequest } from "@/lib/queryClient";
 import RepairPopup from "@/components/RepairPopup";
 import AntivirusPopup, { AV_DURATION_MS } from "@/components/AntivirusPopup";
+import UpgradeMachinePopup from "@/components/UpgradeMachinePopup";
 
 interface MachineState {
   miningLevel: number;
@@ -187,6 +188,7 @@ export default function MiningMachinePanel() {
   const [cpuCountdown, setCpuCountdown] = useState(0);
   const [repairOpen, setRepairOpen] = useState(false);
   const [antivirusOpen, setAntivirusOpen] = useState(false);
+  const [upgradeOpen, setUpgradeOpen] = useState(false);
 
   const { data: state, isLoading } = useQuery<MachineState>({
     queryKey: ["/api/axn-mining/state"],
@@ -543,23 +545,46 @@ export default function MiningMachinePanel() {
               </button>
             </div>
 
-            <div className="grid grid-cols-2 gap-2">
+            <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)', background: '#141414' }}>
               <button
                 onClick={() => setRepairOpen(true)}
-                className="h-10 rounded-xl flex items-center justify-center gap-1.5 font-black text-[11px] uppercase tracking-widest transition-all active:scale-[0.97]"
-                style={{ background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}
+                className="w-full flex items-center justify-between px-4 py-3 active:bg-white/5 transition-all"
               >
-                <Wrench className="w-3.5 h-3.5" /> Repair
+                <div className="flex items-center gap-3">
+                  <Wrench className="w-5 h-5 text-white/50" />
+                  <span className="text-white text-sm font-semibold">Repair</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-white/30 text-xs tabular-nums">{state.repairCost} AXN</span>
+                  <ChevronRight className="w-4 h-4 text-white/20" />
+                </div>
               </button>
+              <div className="h-px mx-4" style={{ background: 'rgba(255,255,255,0.05)' }} />
               <button
                 onClick={() => setAntivirusOpen(true)}
-                className="h-10 rounded-xl flex items-center justify-center gap-1.5 font-black text-[11px] uppercase tracking-widest transition-all active:scale-[0.97]"
-                style={state.antivirusActive
-                  ? { background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', color: '#22c55e' }
-                  : { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444' }
-                }
+                className="w-full flex items-center justify-between px-4 py-3 active:bg-white/5 transition-all"
               >
-                <Shield className="w-3.5 h-3.5" /> Antivirus
+                <div className="flex items-center gap-3">
+                  <Shield className="w-5 h-5" style={{ color: state.antivirusActive ? '#22c55e' : '#ef4444' }} />
+                  <span className="text-white text-sm font-semibold">Antivirus</span>
+                </div>
+                <div className="flex items-center gap-2">
+                  <span className="text-xs font-bold" style={{ color: state.antivirusActive ? '#22c55e' : '#ef4444' }}>
+                    {state.antivirusActive ? 'Active' : 'Off'}
+                  </span>
+                  <ChevronRight className="w-4 h-4 text-white/20" />
+                </div>
+              </button>
+              <div className="h-px mx-4" style={{ background: 'rgba(255,255,255,0.05)' }} />
+              <button
+                onClick={() => setUpgradeOpen(true)}
+                className="w-full flex items-center justify-between px-4 py-3 active:bg-white/5 transition-all"
+              >
+                <div className="flex items-center gap-3">
+                  <Settings className="w-5 h-5" style={{ color: '#F5C542' }} />
+                  <span className="text-white text-sm font-semibold">Upgrade Machine</span>
+                </div>
+                <ChevronRight className="w-4 h-4 text-white/20" />
               </button>
             </div>
           </div>
@@ -581,6 +606,9 @@ export default function MiningMachinePanel() {
           balance={state.balance}
           onClose={() => setAntivirusOpen(false)}
         />
+      )}
+      {upgradeOpen && (
+        <UpgradeMachinePopup onClose={() => setUpgradeOpen(false)} />
       )}
     </div>
   );
