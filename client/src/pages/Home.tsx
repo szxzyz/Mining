@@ -1062,20 +1062,6 @@ export default function Home() {
     checkForUpdatesMutation.mutate();
   }, [checkForUpdatesMutation]);
 
-  if (isLoading) {
-    return (
-      <div className="min-h-screen bg-background flex items-center justify-center">
-        <div className="text-center">
-          <div className="flex gap-1 justify-center mb-4">
-            <div className="w-2 h-2 rounded-full bg-[#4cd3ff] animate-bounce" style={{ animationDelay: '0ms' }}></div>
-            <div className="w-2 h-2 rounded-full bg-[#4cd3ff] animate-bounce" style={{ animationDelay: '150ms' }}></div>
-            <div className="w-2 h-2 rounded-full bg-[#4cd3ff] animate-bounce" style={{ animationDelay: '300ms' }}></div>
-          </div>
-          <div className="text-foreground font-medium">Loading...</div>
-        </div>
-      </div>
-    );
-  }
 
   const userRank = leaderboardData?.userEarnerRank?.rank;
 
@@ -1113,22 +1099,12 @@ export default function Home() {
       </AnimatePresence>
 
       <main className="max-w-md mx-auto px-4 pb-24" style={{ paddingTop: headerHeight + 8 }}>
-        {/* Balance & Stats Section */}
-        <div className="mb-4 relative">
-
-          <div className="w-full">
-              <MiningMachinePanel />
-          </div>
-        </div>
-
-        {/* Footer spacer */}
-        <div className="mt-4 mb-2" />
-
+        <MiningMachinePanel />
       </main>
 
       {false && boosterPopupOpen && (
         <div className="fixed inset-0 bg-black/90 flex items-center justify-center z-50 px-4">
-          <div className="bg-[#0d0d0d] rounded-2xl p-6 w-full max-w-sm border border-[#1a1a1a] relative">
+          <div className="bg-[#0d0f14] rounded-2xl p-6 w-full max-w-sm border border-[#1a1a1a] relative">
             <div className="flex items-center justify-center gap-2 mb-6">
               <CalendarCheck className="w-5 h-5 text-[#4cd3ff]" />
               <h2 className="text-lg font-bold text-white">Daily Tasks</h2>
