@@ -25,6 +25,7 @@ const Profile = lazy(() => import("@/pages/Profile"));
 const CreateTask = lazy(() => import("@/pages/CreateTask"));
 const CountryControls = lazy(() => import("@/pages/CountryControls"));
 const NotFound = lazy(() => import("@/pages/not-found"));
+const Offers = lazy(() => import("@/pages/Offers"));
 
 const PageLoader = memo(function PageLoader() {
   return null;
@@ -55,6 +56,7 @@ function Router() {
     <Suspense fallback={<LoadingFallback />}>
       <Switch>
         <Route path="/" component={Home} />
+        <Route path="/offers" component={Offers} />
         <Route path="/task/create" component={CreateTask} />
         <Route path="/create-task" component={CreateTask} />
         <Route path="/profile" component={Profile} />
