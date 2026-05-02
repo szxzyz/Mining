@@ -4,7 +4,7 @@ import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, Shield, ShieldOff, Cpu, HardDrive, Activity,
   Wrench, AlertTriangle, Play,
-  Loader2, Info, Clock
+  Loader2, Clock
 } from "lucide-react";
 import { showNotification } from "@/components/AppNotification";
 import { apiRequest } from "@/lib/queryClient";
@@ -37,7 +37,7 @@ interface MachineState {
 }
 
 const AV_ACTIVE_KEY = "av_activated_at";
-const AV_DURATION_SECONDS = AV_DURATION_MS / 1000; // 5 minutes
+const AV_DURATION_SECONDS = AV_DURATION_MS / 1000;
 
 function formatTime(seconds: number): string {
   if (seconds <= 0) return "00:00";
@@ -46,6 +46,126 @@ function formatTime(seconds: number): string {
   const s = seconds % 60;
   if (h > 0) return `${h}h ${m.toString().padStart(2, "0")}m`;
   return `${m.toString().padStart(2, "0")}:${s.toString().padStart(2, "0")}`;
+}
+
+function nowStamp(): string {
+  const d = new Date();
+  const pad = (n: number) => String(n).padStart(2, "0");
+  return `[${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}:${pad(d.getSeconds())}]`;
+}
+
+function makelog(miningRate: number, mined: number): string {
+  const r = Math.random();
+  const ts = nowStamp();
+  const temp = 55 + Math.floor(Math.random() * 15);
+  const fan = 68 + Math.floor(Math.random() * 20);
+  const pwr = 170 + Math.floor(Math.random() * 60);
+  const mem = (39 + Math.random() * 3).toFixed(1);
+  const hs = (miningRate * 3600 * 0.001 + Math.random() * 5).toFixed(2);
+  const reward = (miningRate * (0.8 + Math.random() * 0.4)).toFixed(8);
+  const shares = Math.floor(Math.random() * 20) + 1;
+  const block = 850000 + Math.floor(Math.random() * 9999);
+  if (r < 0.28) return `${ts} gpu[0,1]: ${temp}°C fan:${fan}% pwr:${pwr}W mem:${mem}GB`;
+  if (r < 0.48) return `${ts} reward: +${reward} AXN pending`;
+  if (r < 0.62) return `${ts} hashrate: ${hs} MH/s  shares:${shares}`;
+  if (r < 0.72) return `${ts} REWARD_CALC: block=${block} | base=${mined.toFixed(4)} AXN`;
+  if (r < 0.82) return `${ts} pool_fee: -${(miningRate * 0.005).toFixed(8)} AXN (0.5%)`;
+  if (r < 0.90) return `${ts} your_share: ${(miningRate * 0.00001).toFixed(10)} AXN`;
+  if (r < 0.95) return `${ts} payout_pending: +${mined.toFixed(8)} AXN`;
+  return `${ts} stratum: accepted  diff=512K  ${hs}MH`;
+}
+
+function MiningTerminal({ isMining, miningRate, mined }: { isMining: boolean; miningRate: number; mined: number }) {
+  const canvasRef = useRef<HTMLCanvasElement>(null);
+  const [logs, setLogs] = useState<string[]>([]);
+  const logsRef = useRef<string[]>([]);
+  const rafRef = useRef<number>(0);
+
+  useEffect(() => {
+    const canvas = canvasRef.current;
+    if (!canvas) return;
+    const ctx = canvas.getContext("2d");
+    if (!ctx) return;
+    const W = canvas.offsetWidth || 360;
+    const H = canvas.offsetHeight || 130;
+    canvas.width = W;
+    canvas.height = H;
+    const fontSize = 10;
+    const cols = Math.floor(W / fontSize);
+    const drops: number[] = Array.from({ length: cols }, () => Math.random() * -60);
+    const chars = "01アイウエオカキクケコ$%#@&*!<>{}[]サシスセソタチツテト";
+    let lastTs = 0;
+    const INTERVAL = 50;
+    const tick = (ts: number) => {
+      if (ts - lastTs >= INTERVAL) {
+        lastTs = ts;
+        ctx.fillStyle = "rgba(4,4,4,0.22)";
+        ctx.fillRect(0, 0, W, H);
+        for (let i = 0; i < drops.length; i++) {
+          const ch = chars[Math.floor(Math.random() * chars.length)];
+          const x = i * fontSize;
+          const y = drops[i] * fontSize;
+          const rng = Math.random();
+          ctx.fillStyle = rng > 0.93 ? "#fff" : rng > 0.55 ? "#39ff14" : "#00960a";
+          ctx.font = `${fontSize}px monospace`;
+          ctx.fillText(ch, x, y);
+          if (y > H && Math.random() > 0.975) drops[i] = 0;
+          drops[i] += 0.5;
+        }
+      }
+      rafRef.current = requestAnimationFrame(tick);
+    };
+    rafRef.current = requestAnimationFrame(tick);
+    return () => cancelAnimationFrame(rafRef.current);
+  }, []);
+
+  useEffect(() => {
+    if (!isMining) return;
+    const addLog = () => {
+      const line = makelog(miningRate, mined);
+      logsRef.current = [...logsRef.current.slice(-18), line];
+      setLogs([...logsRef.current]);
+    };
+    addLog();
+    const t = setInterval(addLog, 350 + Math.random() * 200);
+    return () => clearInterval(t);
+  }, [isMining, miningRate]);
+
+  return (
+    <div className="relative w-full rounded-xl overflow-hidden" style={{ height: 130 }}>
+      <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ display: "block" }} />
+      <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.62)" }} />
+      <div
+        className="absolute inset-0 overflow-hidden px-2 py-1.5 flex flex-col justify-end"
+        style={{ fontFamily: "monospace" }}
+      >
+        {!isMining ? (
+          <div className="flex-1 flex items-center justify-center">
+            <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 11 }}>— idle —</span>
+          </div>
+        ) : (
+          <>
+            <div style={{ fontSize: "9.5px", lineHeight: "1.45" }}>
+              {logs.slice(-7).map((line, i) => {
+                const isReward = line.includes("reward:");
+                const isGpu = line.includes("gpu[");
+                const isHash = line.includes("hashrate:");
+                const color = isReward ? "#39ff14" : isGpu ? "#60a5fa" : isHash ? "#facc15" : "rgba(255,255,255,0.45)";
+                return (
+                  <div key={i} className="truncate" style={{ color }}>
+                    {line}
+                  </div>
+                );
+              })}
+            </div>
+            <div style={{ fontSize: "13px", lineHeight: "1.6", fontWeight: 900, color: "#39ff14", textShadow: "0 0 10px #39ff1488", marginTop: 2 }}>
+              $ {mined.toFixed(4)} AXN ▋
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
 }
 
 export default function MiningMachinePanel() {
@@ -60,7 +180,6 @@ export default function MiningMachinePanel() {
     retry: false,
   });
 
-  // Sync CPU countdown from server — then tick independently
   useEffect(() => {
     if (!state) return;
     if (state.cpuRunning && state.cpuRemainingSeconds > 0) {
@@ -70,7 +189,6 @@ export default function MiningMachinePanel() {
     }
   }, [state?.cpuRemainingSeconds, state?.cpuRunning]);
 
-  // CPU timer always ticks continuously (even when capacity full / health 0)
   useEffect(() => {
     if (cpuCountdown <= 0) return;
     const t = setInterval(() => setCpuCountdown(p => Math.max(0, p - 1)), 1000);
@@ -82,20 +200,18 @@ export default function MiningMachinePanel() {
     if (state) setLocalMined(state.minedAxn);
   }, [state?.minedAxn]);
 
-  // Mining accumulation — stops when health = 0 or capacity full; CPU continues
   useEffect(() => {
     if (!state?.cpuRunning || !state?.miningRate) return;
-    if (state.machineHealth <= 0) return; // health 0: no mining
+    if (state.machineHealth <= 0) return;
     const t = setInterval(() => {
       setLocalMined(prev => {
-        if (prev >= state.capacity) return prev; // capacity full: stop accumulating
+        if (prev >= state.capacity) return prev;
         return Math.min(prev + state.miningRate, state.capacity);
       });
     }, 1000);
     return () => clearInterval(t);
   }, [state?.cpuRunning, state?.miningRate, state?.capacity, state?.machineHealth]);
 
-  // Antivirus 5-minute countdown
   const [avSecondsLeft, setAvSecondsLeft] = useState(0);
   const avIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
@@ -107,7 +223,6 @@ export default function MiningMachinePanel() {
       if (remaining <= 0) {
         setAvSecondsLeft(0);
         if (avIntervalRef.current) clearInterval(avIntervalRef.current);
-        // Auto-deactivate on server
         antivirusDeactivateMutation.mutate();
       } else {
         setAvSecondsLeft(remaining);
@@ -167,11 +282,11 @@ export default function MiningMachinePanel() {
   const claimMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/axn-mining/claim").then(r => r.json()),
     onSuccess: (d) => {
-      showNotification(`+${d.amount?.toFixed(2)} AXN claimed!`, "success");
+      showNotification(`+${d.amount?.toFixed(2)} AXN collected!`, "success");
       setLocalMined(0);
       invalidate();
     },
-    onError: (e: any) => showNotification(e.message || "Nothing to claim", "error"),
+    onError: (e: any) => showNotification(e.message || "Nothing to collect", "error"),
   });
 
   const refillMutation = useMutation({
@@ -198,25 +313,11 @@ export default function MiningMachinePanel() {
     ? Math.max(0, Math.round((cpuCountdown / state.cpuDurationSec) * 100))
     : state.hasEnergy ? 100 : 0;
 
-  const isMiningHalted = state.machineHealth <= 0 && state.cpuRunning;
+  const isMining = state.cpuRunning && state.machineHealth > 0;
 
   return (
     <div className="w-full space-y-3">
-      {/* Health Warning — Mining halted */}
       <AnimatePresence>
-        {state.machineHealth <= 0 && (
-          <motion.div
-            initial={{ opacity: 0, y: -8 }}
-            animate={{ opacity: 1, y: 0 }}
-            exit={{ opacity: 0, y: -8 }}
-            className="bg-red-950/60 border border-red-500/30 rounded-xl px-4 py-3"
-          >
-            <div className="flex items-center gap-2.5">
-              <Wrench className="w-4 h-4 text-red-400 flex-shrink-0" />
-              <p className="text-red-300 text-xs font-bold">Machine broken — Mining stopped! Repair to resume.</p>
-            </div>
-          </motion.div>
-        )}
         {state.machineHealth > 0 && state.machineHealth < 40 && (
           <motion.div
             initial={{ opacity: 0, y: -8 }}
@@ -234,38 +335,65 @@ export default function MiningMachinePanel() {
         )}
       </AnimatePresence>
 
-      {/* Main Machine Card */}
-      <div className="bg-[#0e0e0e] border border-[#222] rounded-2xl overflow-hidden">
-        {/* Header */}
-        <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-[#1a1a1a]">
-          <div className="flex items-center gap-2">
-            <div className="w-8 h-8 rounded-xl bg-[#F5C542]/10 flex items-center justify-center">
-              <span className="text-base">⛏️</span>
+      <div className="bg-[#000000] border border-[#1c1c1e] rounded-2xl overflow-hidden">
+
+        {/* Top: Antivirus Status Bar */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-[#1c1c1e]">
+          {state.antivirusActive ? (
+            <div className="flex items-center gap-2">
+              <Shield className="w-3.5 h-3.5 text-green-400" />
+              <span className="text-green-400 text-[11px] font-black uppercase tracking-wider">Antivirus Active — No Threats Detected</span>
+              {avSecondsLeft > 0 && (
+                <div className="flex items-center gap-1 bg-green-500/15 rounded-md px-1.5 py-0.5">
+                  <Clock className="w-2.5 h-2.5 text-green-400" />
+                  <span className="text-green-400 text-[9px] font-black tabular-nums">{formatTime(avSecondsLeft)}</span>
+                </div>
+              )}
             </div>
-            <div>
-              <p className="text-white text-sm font-black leading-none">AXN Mining Rig</p>
-              <p className="text-white/30 text-[10px] font-semibold uppercase tracking-wider mt-0.5">
-                Mining Lv.{state.miningLevel} · Cap Lv.{state.capacityLevel} · CPU Lv.{state.cpuLevel}
-              </p>
-            </div>
+          ) : (
+            <button
+              onClick={() => setAntivirusOpen(true)}
+              className="flex items-center gap-2 active:scale-95 transition-transform"
+            >
+              <ShieldOff className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+              <span className="text-red-400 text-[11px] font-black uppercase tracking-wider">Virus Detected — Machine At Risk</span>
+            </button>
+          )}
+        </div>
+
+        {/* Level Labels Row */}
+        <div className="flex items-center justify-center gap-5 px-4 py-2 border-b border-[#1c1c1e]">
+          <div className="flex items-center gap-1.5">
+            <Activity className="w-3 h-3 text-[#F5C542]/60" />
+            <span className="text-[#F5C542]/70 text-[10px] font-bold uppercase tracking-wide">Mining</span>
+            <span className="text-[#F5C542] text-[10px] font-black tabular-nums">Lv.{state.miningLevel}</span>
+          </div>
+          <span className="text-white/10 text-xs">|</span>
+          <div className="flex items-center gap-1.5">
+            <HardDrive className="w-3 h-3 text-blue-400/60" />
+            <span className="text-blue-400/70 text-[10px] font-bold uppercase tracking-wide">Capacity</span>
+            <span className="text-blue-400 text-[10px] font-black tabular-nums">Lv.{state.capacityLevel}</span>
+          </div>
+          <span className="text-white/10 text-xs">|</span>
+          <div className="flex items-center gap-1.5">
+            <Cpu className="w-3 h-3 text-purple-400/60" />
+            <span className="text-purple-400/70 text-[10px] font-bold uppercase tracking-wide">CPU</span>
+            <span className="text-purple-400 text-[10px] font-black tabular-nums">Lv.{state.cpuLevel}</span>
           </div>
         </div>
 
-        {/* Mining Display */}
+        {/* Matrix Terminal Log Display */}
+        <div className="px-3 pt-3 pb-2">
+          <MiningTerminal
+            isMining={isMining}
+            miningRate={state.miningRate}
+            mined={localMined}
+          />
+        </div>
+
+        <div className="border-t border-[#1c1c1e] mx-4" />
+
         <div className="px-4 py-4">
-          {/* Mined AXN */}
-          <div className="text-center mb-4">
-            <div
-              className="text-4xl font-black tabular-nums tracking-tight"
-              style={{ color: state.cpuRunning && state.machineHealth > 0 ? '#4ade80' : '#ffffff60' }}
-            >
-              {localMined.toFixed(2)}
-            </div>
-            <p className="text-white/30 text-[10px] font-bold uppercase tracking-widest mt-1">AXN Mined</p>
-            {isMiningHalted && (
-              <p className="text-red-400 text-[10px] font-bold mt-1">Mining halted — health at 0%</p>
-            )}
-          </div>
 
           {/* Capacity Progress */}
           <div className="mb-4">
@@ -290,22 +418,19 @@ export default function MiningMachinePanel() {
 
           {/* Stats Row */}
           <div className="grid grid-cols-3 gap-2 mb-4">
-            {/* Mining Rate */}
-            <div className="bg-[#161616] rounded-xl p-2.5 text-center border border-[#1e1e1e]">
+            <div className="bg-[#1c1c1e] rounded-xl p-2.5 text-center">
               <Activity className="w-3.5 h-3.5 text-[#F5C542] mx-auto mb-1" />
               <p className="text-white text-xs font-black tabular-nums">{state.miningRate}/s</p>
               <p className="text-white/30 text-[9px] uppercase tracking-wide mt-0.5">Rate</p>
             </div>
-            {/* CPU Timer — always runs, even if capacity full / health 0 */}
-            <div className="bg-[#161616] rounded-xl p-2.5 text-center border border-[#1e1e1e]">
+            <div className="bg-[#1c1c1e] rounded-xl p-2.5 text-center">
               <Cpu className="w-3.5 h-3.5 text-blue-400 mx-auto mb-1" />
               <p className={`text-xs font-black tabular-nums ${state.cpuRunning ? 'text-blue-300' : 'text-white/40'}`}>
                 {state.cpuRunning ? formatTime(cpuCountdown) : 'Idle'}
               </p>
               <p className="text-white/30 text-[9px] uppercase tracking-wide mt-0.5">CPU</p>
             </div>
-            {/* Machine Health */}
-            <div className="bg-[#161616] rounded-xl p-2.5 text-center border border-[#1e1e1e]">
+            <div className="bg-[#1c1c1e] rounded-xl p-2.5 text-center">
               <Wrench className="w-3.5 h-3.5 mx-auto mb-1" style={{ color: healthColor }} />
               <p className="text-xs font-black tabular-nums" style={{ color: healthColor }}>
                 {state.machineHealth}%
@@ -321,7 +446,7 @@ export default function MiningMachinePanel() {
           </div>
 
           {/* Energy Bar */}
-          <div className="flex items-center gap-3 bg-[#161616] rounded-xl px-3 py-2.5 border border-[#1e1e1e] mb-4">
+          <div className="flex items-center gap-3 bg-[#1c1c1e] rounded-xl px-3 py-2.5 mb-4">
             <div className="flex items-center gap-1.5 flex-1">
               <Zap
                 className="w-3.5 h-3.5 flex-shrink-0"
@@ -374,46 +499,8 @@ export default function MiningMachinePanel() {
             )}
           </div>
 
-          {/* Antivirus warning banner */}
-          <div className="mb-4">
-            {state.antivirusActive ? (
-              <div className="flex items-center justify-between bg-green-500/10 border border-green-500/25 rounded-xl px-3 py-2.5">
-                <div className="flex items-center gap-2">
-                  <Shield className="w-4 h-4 text-green-400" />
-                  <div>
-                    <p className="text-green-400 text-[11px] font-black uppercase tracking-wider">System Protected</p>
-                    <p className="text-green-400/50 text-[9px] font-semibold mt-0.5">Antivirus active — no threats detected</p>
-                  </div>
-                </div>
-                {avSecondsLeft > 0 && (
-                  <div className="flex items-center gap-1 bg-green-500/20 rounded-lg px-2 py-1">
-                    <Clock className="w-3 h-3 text-green-400" />
-                    <span className="text-green-400 text-[10px] font-black tabular-nums">{formatTime(avSecondsLeft)}</span>
-                  </div>
-                )}
-              </div>
-            ) : (
-              <div className="flex items-center justify-between bg-red-500/10 border border-red-500/25 rounded-xl px-3 py-2.5">
-                <div className="flex items-center gap-2">
-                  <ShieldOff className="w-4 h-4 text-red-400 animate-pulse" />
-                  <div>
-                    <p className="text-red-400 text-[11px] font-black uppercase tracking-wider">⚠ System Exposed</p>
-                    <p className="text-red-400/50 text-[9px] font-semibold mt-0.5">Virus detected — machine at risk</p>
-                  </div>
-                </div>
-                <button
-                  onClick={() => setAntivirusOpen(true)}
-                  className="text-[9px] font-black uppercase tracking-wider bg-red-500/20 border border-red-500/30 text-red-300 px-2 py-1 rounded-lg active:scale-95 transition-transform"
-                >
-                  Fix Now
-                </button>
-              </div>
-            )}
-          </div>
-
           {/* Action Buttons */}
           <div className="space-y-2">
-            {/* Start CPU / Claim row */}
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => startCpuMutation.mutate()}
@@ -427,7 +514,7 @@ export default function MiningMachinePanel() {
                 style={
                   !state.cpuRunning && state.hasEnergy && state.machineHealth > 0
                     ? { background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: '#fff', boxShadow: '0 0 14px rgba(59,130,246,0.3)' }
-                    : { background: 'rgba(255,255,255,0.04)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.25)' }
+                    : { background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.25)' }
                 }
               >
                 {startCpuMutation.isPending ? (
@@ -448,16 +535,15 @@ export default function MiningMachinePanel() {
                   color: '#000',
                   boxShadow: '0 0 14px rgba(245,197,66,0.3)',
                 } : {
-                  background: 'rgba(255,255,255,0.04)',
+                  background: '#1c1c1e',
                   border: '1px solid rgba(255,255,255,0.08)',
                   color: 'rgba(255,255,255,0.25)',
                 }}
               >
-                {claimMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '⬇ Claim AXN'}
+                {claimMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '⬇ Collect AXN'}
               </button>
             </div>
 
-            {/* Repair + Antivirus row */}
             <div className="grid grid-cols-2 gap-2">
               <button
                 onClick={() => setRepairOpen(true)}
@@ -468,7 +554,7 @@ export default function MiningMachinePanel() {
                   border: '1px solid rgba(239,68,68,0.25)',
                   color: '#f87171',
                 } : {
-                  background: 'rgba(255,255,255,0.03)',
+                  background: '#1c1c1e',
                   border: '1px solid rgba(255,255,255,0.06)',
                   color: 'rgba(255,255,255,0.2)',
                 }}
@@ -491,7 +577,7 @@ export default function MiningMachinePanel() {
                 }}
               >
                 {state.antivirusActive ? (
-                  <><Shield className="w-3 h-3" /> AV Active</>
+                  <><Shield className="w-3 h-3" /> Protected</>
                 ) : (
                   <><ShieldOff className="w-3 h-3" /> Antivirus</>
                 )}
@@ -501,17 +587,6 @@ export default function MiningMachinePanel() {
         </div>
       </div>
 
-      {/* Info Footer */}
-      <div className="flex items-start gap-2 bg-white/[0.03] border border-white/5 rounded-xl px-3 py-2.5">
-        <Info className="w-3.5 h-3.5 text-white/20 flex-shrink-0 mt-0.5" />
-        <p className="text-white/25 text-[10px] leading-relaxed">
-          Start mining to earn AXN. Claim before capacity fills.
-          Antivirus lasts 5 minutes — reactivate when needed.
-          Mining stops if health reaches 0% — repair to continue.
-        </p>
-      </div>
-
-      {/* Popups */}
       {repairOpen && (
         <RepairPopup
           repairCost={state.repairCost}

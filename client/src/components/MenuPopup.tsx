@@ -106,7 +106,8 @@ export default function MenuPopup({ onClose, onOpenInvite }: MenuPopupProps) {
       <AnimatePresence>
         {overlay === null && (
           <motion.div
-            className="fixed inset-0 z-[200] bg-[#0a0a0a] flex flex-col"
+            className="fixed inset-0 z-[200] flex flex-col"
+            style={{ background: '#000000' }}
             {...slideProps}
           >
             {/* Header */}
@@ -201,7 +202,8 @@ export default function MenuPopup({ onClose, onOpenInvite }: MenuPopupProps) {
       <AnimatePresence>
         {overlay === "language" && (
           <motion.div
-            className="fixed inset-0 bg-[#0a0a0a] z-[300] flex flex-col"
+            className="fixed inset-0 z-[300] flex flex-col"
+            style={{ background: '#000000' }}
             {...slideProps}
           >
             <OverlayHeader title="Select Language" onBack={() => setOverlay(null)} />
@@ -237,7 +239,7 @@ export default function MenuPopup({ onClose, onOpenInvite }: MenuPopupProps) {
       {/* ── Project Statistics ── */}
       <AnimatePresence>
         {overlay === "stats" && (
-          <motion.div className="fixed inset-0 bg-[#0a0a0a] z-[300] flex flex-col" {...slideProps}>
+          <motion.div className="fixed inset-0 z-[300] flex flex-col" style={{ background: '#000000' }} {...slideProps}>
             <OverlayHeader title="Project Statistics" onBack={() => setOverlay(null)} />
             <div className="flex-1 overflow-y-auto px-4 py-4">
               {!projectStats ? (
@@ -278,7 +280,7 @@ export default function MenuPopup({ onClose, onOpenInvite }: MenuPopupProps) {
       {/* ── Transactions ── */}
       <AnimatePresence>
         {overlay === "transactions" && (
-          <motion.div className="fixed inset-0 bg-[#0a0a0a] z-[300] flex flex-col" {...slideProps}>
+          <motion.div className="fixed inset-0 z-[300] flex flex-col" style={{ background: '#000000' }} {...slideProps}>
             <OverlayHeader title="Transactions" onBack={() => setOverlay(null)} />
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2.5">
               {txLoading ? (
@@ -316,7 +318,7 @@ export default function MenuPopup({ onClose, onOpenInvite }: MenuPopupProps) {
       {/* ── Legal / Privacy Policy ── */}
       <AnimatePresence>
         {overlay === "legal" && (
-          <motion.div className="fixed inset-0 bg-[#0a0a0a] z-[300] flex flex-col" {...slideProps}>
+          <motion.div className="fixed inset-0 z-[300] flex flex-col" style={{ background: '#000000' }} {...slideProps}>
             <OverlayHeader title="Privacy Policy" onBack={() => setOverlay(null)} />
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
               <LegalBlock icon={<FileText className="w-4 h-4 text-orange-400" />} title="Terms of Use">
@@ -342,13 +344,13 @@ export default function MenuPopup({ onClose, onOpenInvite }: MenuPopupProps) {
       {/* ── FAQs ── */}
       <AnimatePresence>
         {overlay === "faq" && (
-          <motion.div className="fixed inset-0 bg-[#0a0a0a] z-[300] flex flex-col" {...slideProps}>
+          <motion.div className="fixed inset-0 z-[300] flex flex-col" style={{ background: '#000000' }} {...slideProps}>
             <OverlayHeader title="FAQs" onBack={() => setOverlay(null)} />
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-2.5">
               {[
                 { q: "How do I earn AXN?", a: "Earn AXN by mining with your machine, watching ads, completing tasks, daily check-ins, and inviting friends." },
                 { q: "What is the Mining Machine?", a: "Your personal AXN generator. Start the CPU to mine AXN, claim when capacity fills, and keep antivirus ON to prevent attacks." },
-                { q: "How long does antivirus last?", a: "Antivirus stays active for 25 minutes after activation, then auto-disables. You need to reactivate it manually." },
+                { q: "How long does antivirus last?", a: "Antivirus stays active for 2 minutes after activation, then auto-disables. You need to reactivate it manually." },
                 { q: "How does the referral system work?", a: "Share your referral link. When someone joins, you earn AXN. You also earn bonus AXN every time your referrals level up their machine." },
                 { q: "When can I withdraw?", a: "Once you reach the minimum withdrawal amount. Tap Withdraw in the bottom bar to check eligibility." },
                 { q: "Why was my account banned?", a: "Accounts are banned for violating terms: multiple accounts, self-referrals, or exploiting bugs. Contact support if you believe this is a mistake." },
@@ -367,13 +369,13 @@ export default function MenuPopup({ onClose, onOpenInvite }: MenuPopupProps) {
       {/* ── Tutorial ── */}
       <AnimatePresence>
         {overlay === "tutorial" && (
-          <motion.div className="fixed inset-0 bg-[#0a0a0a] z-[300] flex flex-col" {...slideProps}>
+          <motion.div className="fixed inset-0 z-[300] flex flex-col" style={{ background: '#000000' }} {...slideProps}>
             <OverlayHeader title="Tutorial" onBack={() => setOverlay(null)} />
             <div className="flex-1 overflow-y-auto px-4 py-4 space-y-3">
               {[
                 { step: "1", title: "Set Up Your Machine", desc: "Start the CPU to begin mining AXN. Your machine mines automatically while running.", icon: "⛏️" },
-                { step: "2", title: "Activate Antivirus", desc: "Turn on antivirus to protect your machine from attacks. It lasts 25 minutes per activation.", icon: "🛡️" },
-                { step: "3", title: "Claim Your Mining", desc: "When capacity fills, tap Claim AXN to add mined tokens to your balance.", icon: "💰" },
+                { step: "2", title: "Activate Antivirus", desc: "Turn on antivirus to protect your machine from attacks. It lasts 2 minutes per activation.", icon: "🛡️" },
+                { step: "3", title: "Collect Your Mining", desc: "When capacity fills, tap Collect AXN to add mined tokens to your balance.", icon: "💰" },
                 { step: "4", title: "Complete Tasks", desc: "Watch ads and complete daily tasks to earn additional AXN on top of your mining income.", icon: "✅" },
                 { step: "5", title: "Invite Friends", desc: "Share your referral link. Earn AXN bonuses when friends join and level up their machine.", icon: "👥" },
                 { step: "6", title: "Upgrade Machine", desc: "Use AXN to upgrade mining speed, capacity, and CPU duration for higher earnings.", icon: "⚡" },

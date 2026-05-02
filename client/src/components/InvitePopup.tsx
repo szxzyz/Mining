@@ -1,7 +1,7 @@
 import { useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import {
-  CheckCircle, XCircle, Loader2, RefreshCw,
+  CheckCircle, XCircle, Loader2, RefreshCw, ArrowLeft, X,
 } from "lucide-react";
 import { RiShareForwardFill, RiUserFollowFill, RiLinkM, RiGroupFill } from "react-icons/ri";
 import { BsLightningChargeFill } from "react-icons/bs";
@@ -122,15 +122,23 @@ export default function InvitePopup({ onClose }: InvitePopupProps) {
   return (
     <AnimatePresence>
       <motion.div
-        className="fixed inset-0 z-[300] bg-[#0a0a0a] flex flex-col"
+        className="fixed inset-0 z-[300] flex flex-col"
+        style={{ background: '#000000' }}
         initial={{ x: "100%" }}
         animate={{ x: 0 }}
         exit={{ x: "100%" }}
         transition={{ type: "tween", duration: 0.2, ease: "easeOut" }}
       >
         {/* Header */}
-        <div className="px-5 py-4 border-b border-white/5 flex-shrink-0 flex items-center justify-center">
+        <div className="px-5 py-4 border-b border-white/5 flex-shrink-0 flex items-center justify-between">
+          <div className="w-12" />
           <h2 className="text-white font-black text-base uppercase tracking-tight italic">Invite Friends</h2>
+          <button
+            onClick={onClose}
+            className="h-8 px-3 rounded-xl bg-[#1c1c1e] text-white/60 text-xs font-bold active:scale-90 transition-transform flex-shrink-0"
+          >
+            Close
+          </button>
         </div>
 
         {/* Tabs */}
@@ -384,13 +392,13 @@ export default function InvitePopup({ onClose }: InvitePopupProps) {
           )}
         </div>
 
-        {/* Bottom Back Button */}
+        {/* Bottom Close Button */}
         <div className="px-5 py-4 border-t border-white/5 flex-shrink-0">
           <button
             onClick={onClose}
             className="w-full h-12 bg-[#1a1a1a]/50 border border-[#2a2a2a] rounded-2xl font-black uppercase tracking-wider text-white text-sm hover:bg-white/5 transition-all active:scale-[0.98]"
           >
-            Back
+            Close
           </button>
         </div>
       </motion.div>

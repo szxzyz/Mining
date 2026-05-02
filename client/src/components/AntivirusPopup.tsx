@@ -1,14 +1,14 @@
 import { useState, useEffect } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
-import { Shield, Loader2, Clock, Play } from "lucide-react";
+import { Shield, Loader2, Clock, Play, X } from "lucide-react";
 import { showNotification } from "@/components/AppNotification";
 import { apiRequest } from "@/lib/queryClient";
 
 const FREE_COOLDOWN_KEY = "antivirus_free_used_at";
 const AV_ACTIVE_KEY = "av_activated_at";
 const COOLDOWN_MS = 35 * 60 * 1000;
-export const AV_DURATION_MS = 5 * 60 * 1000;
+export const AV_DURATION_MS = 2 * 60 * 1000;
 
 function getRemainingCooldown(): number {
   const stored = localStorage.getItem(FREE_COOLDOWN_KEY);
@@ -55,7 +55,7 @@ export default function AntivirusPopup({ antivirusCost, antivirusActive, balance
     onSuccess: (d) => {
       if (d.active) {
         localStorage.setItem(AV_ACTIVE_KEY, String(Date.now()));
-        showNotification("Antivirus activated for 5 minutes!", "success");
+        showNotification("Antivirus activated for 2 minutes!", "success");
       } else {
         localStorage.removeItem(AV_ACTIVE_KEY);
         showNotification("Antivirus deactivated.", "info");
@@ -72,7 +72,7 @@ export default function AntivirusPopup({ antivirusCost, antivirusActive, balance
       localStorage.setItem(AV_ACTIVE_KEY, String(Date.now()));
       localStorage.setItem(FREE_COOLDOWN_KEY, String(Date.now()));
       setCooldown(COOLDOWN_MS / 1000);
-      showNotification("Antivirus activated for 5 minutes! (Free)", "success");
+      showNotification("Antivirus activated for 2 minutes! (Free)", "success");
       invalidate();
       onClose();
     },
@@ -106,42 +106,68 @@ export default function AntivirusPopup({ antivirusCost, antivirusActive, balance
         animate={{ opacity: 1 }}
         exit={{ opacity: 0 }}
       >
-        <div className="absolute inset-0 bg-black/75 backdrop-blur-sm" onClick={onClose} />
+        <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" onClick={onClose} />
 
         <motion.div
-          className="relative w-full max-w-sm bg-[#0e0e0e] border border-[#222] rounded-3xl overflow-hidden"
-          initial={{ scale: 0.88, opacity: 0 }}
-          animate={{ scale: 1, opacity: 1 }}
-          exit={{ scale: 0.88, opacity: 0 }}
+          className="relative w-full max-w-sm rounded-3xl overflow-hidden"
+          style={{ background: '#0a0a0a', border: '1px solid #1c1c1e' }}
+          initial={{ scale: 0.88, opacity: 0, y: 20 }}
+          animate={{ scale: 1, opacity: 1, y: 0 }}
+          exit={{ scale: 0.88, opacity: 0, y: 20 }}
           transition={{ type: "spring", damping: 26, stiffness: 320 }}
         >
           {/* Header */}
-          <div className="flex flex-col items-center px-5 pt-6 pb-4 border-b border-[#1a1a1a]">
-            <div className="w-12 h-12 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center mb-3">
-              <Shield className="w-5 h-5 text-green-400" />
+          <div className="flex items-center justify-between px-5 pt-5 pb-4 border-b border-[#1c1c1e]">
+            <div className="flex items-center gap-2">
+              <div className="w-7 h-7 rounded-xl bg-green-500/15 flex items-center justify-center">
+                <Shield className="w-3.5 h-3.5 text-green-400" />
+              </div>
+              <div>
+                <p className="text-white font-black text-sm uppercase tracking-wider">Antivirus</p>
+                <p className="text-white/30 text-[10px]">Protects machine for 2 minutes</p>
+              </div>
             </div>
-            <p className="text-white font-black text-base uppercase tracking-wider">Antivirus</p>
-            <p className="text-white/30 text-[11px] mt-1">Protects your machine for 5 minutes</p>
+            <div className="w-8" />
           </div>
 
           <div className="px-5 py-5 space-y-3">
+            {/* Status indicator */}
+            <div className="bg-[#1c1c1e] rounded-2xl px-4 py-3 flex items-center justify-between">
+              <span className="text-white/40 text-xs">Status</span>
+              {antivirusActive ? (
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />
+                  <span className="text-green-400 font-black text-sm">Active</span>
+                </div>
+              ) : (
+                <div className="flex items-center gap-1.5">
+                  <span className="w-1.5 h-1.5 rounded-full bg-red-400 animate-pulse" />
+                  <span className="text-red-400 font-black text-sm">Exposed</span>
+                </div>
+              )}
+            </div>
+
             {/* Duration info */}
-            <div className="bg-[#141414] border border-[#1e1e1e] rounded-2xl px-4 py-3 flex items-center justify-between">
-              <span className="text-white/40 text-xs">Protection Duration</span>
-              <span className="text-green-400 font-black text-sm">5 minutes</span>
+            <div className="bg-[#1c1c1e] rounded-2xl px-4 py-3 flex items-center justify-between">
+              <div className="flex items-center gap-2">
+                <Clock className="w-3.5 h-3.5 text-white/30" />
+                <span className="text-white/40 text-xs">Protection Duration</span>
+              </div>
+              <span className="text-green-400 font-black text-sm">2 minutes</span>
             </div>
 
             {antivirusActive ? (
               <div className="w-full h-14 rounded-2xl bg-green-500/10 border border-green-500/20 flex items-center justify-center gap-2">
                 <Shield className="w-4 h-4 text-green-400" />
-                <span className="text-green-400 font-black text-sm">Antivirus is Active</span>
+                <span className="text-green-400 font-black text-sm">System Protected</span>
               </div>
             ) : (
               <>
                 <button
                   onClick={handleFreeActivate}
                   disabled={cooldown > 0 || adWatching || freeMutation.isPending}
-                  className="w-full h-14 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2 bg-[#161616] border border-[#2a2a2a] text-white"
+                  className="w-full h-14 rounded-2xl font-black text-sm uppercase tracking-wider transition-all active:scale-[0.97] disabled:opacity-50 disabled:cursor-not-allowed flex items-center justify-center gap-2"
+                  style={{ background: '#1c1c1e', border: '1px solid #2a2a2a', color: 'white' }}
                 >
                   {freeMutation.isPending || adWatching ? (
                     <><Loader2 className="w-4 h-4 animate-spin" /> Processing...</>
@@ -161,8 +187,8 @@ export default function AntivirusPopup({ antivirusCost, antivirusActive, balance
                     color: "#fff",
                     boxShadow: "0 0 20px rgba(34,197,94,0.2)",
                   } : {
-                    background: "rgba(255,255,255,0.06)",
-                    border: "1px solid rgba(255,255,255,0.1)",
+                    background: "#1c1c1e",
+                    border: "1px solid rgba(255,255,255,0.08)",
                     color: "rgba(255,255,255,0.3)",
                   }}
                 >
@@ -183,10 +209,10 @@ export default function AntivirusPopup({ antivirusCost, antivirusActive, balance
               </>
             )}
 
-            {/* Close button */}
             <button
               onClick={onClose}
-              className="w-full h-11 rounded-2xl font-bold text-sm text-white/40 bg-white/[0.03] border border-white/[0.06] active:scale-[0.97] transition-transform"
+              className="w-full h-11 rounded-2xl font-bold text-sm text-white/50 active:scale-[0.97] transition-transform"
+              style={{ background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.06)' }}
             >
               Close
             </button>

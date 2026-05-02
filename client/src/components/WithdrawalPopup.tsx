@@ -2,7 +2,7 @@ import { useState, useCallback } from "react";
 import { useMutation, useQueryClient, useQuery } from "@tanstack/react-query";
 import { apiRequest } from "@/lib/queryClient";
 import { showNotification } from "@/components/AppNotification";
-import { Loader2 } from "lucide-react";
+import { Loader2, ArrowLeft, X } from "lucide-react";
 import { MdOndemandVideo } from "react-icons/md";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
@@ -119,28 +119,36 @@ export default function WithdrawalPopup({ open, onOpenChange, tonBalance }: With
           exit={{ opacity: 0 }}
         >
           <div
-            className="absolute inset-0 bg-black/70 backdrop-blur-sm"
+            className="absolute inset-0 bg-black/80 backdrop-blur-sm"
             onClick={() => onOpenChange(false)}
           />
 
           <motion.div
-            className="relative w-full max-w-md bg-[#0d0d0d] border border-[#1a1a1a] rounded-t-3xl overflow-hidden"
+            className="relative w-full max-w-md rounded-t-3xl overflow-hidden"
             initial={{ y: "100%" }}
             animate={{ y: 0 }}
             exit={{ y: "100%" }}
             transition={{ type: "tween", duration: 0.22, ease: "easeOut" }}
-            style={{ maxHeight: "90vh", overflowY: "auto" }}
+            style={{ maxHeight: "90vh", overflowY: "auto", background: '#0a0a0a', borderTop: '1px solid #1c1c1e', borderLeft: '1px solid #1c1c1e', borderRight: '1px solid #1c1c1e' }}
           >
             <div className="flex justify-center pt-3 pb-1">
               <div className="w-10 h-1 rounded-full bg-white/20" />
             </div>
 
-            <div className="flex items-center justify-center px-5 py-3 border-b border-white/5">
-              <h2 className="text-white font-bold text-base">AXN Withdrawal</h2>
+            {/* Header */}
+            <div className="flex items-center justify-between px-5 py-3 border-b border-[#1c1c1e]">
+              <div className="w-12" />
+              <h2 className="text-white font-black text-base uppercase tracking-wider">AXN Withdrawal</h2>
+              <button
+                onClick={() => onOpenChange(false)}
+                className="h-8 px-3 rounded-xl bg-[#1c1c1e] text-white/60 text-xs font-bold active:scale-90 transition-transform"
+              >
+                Close
+              </button>
             </div>
 
             <div className="px-5 py-4 space-y-4">
-              <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl px-4 py-3 flex justify-between items-center">
+              <div className="rounded-xl px-4 py-3 flex justify-between items-center" style={{ background: '#1c1c1e' }}>
                 <span className="text-white/50 text-xs font-semibold">Available Balance</span>
                 <div className="flex items-center gap-1.5">
                   <img src="/axn-logo.svg" alt="AXN" className="w-4 h-4" />
@@ -199,7 +207,7 @@ export default function WithdrawalPopup({ open, onOpenChange, tonBalance }: With
                 </div>
               </div>
 
-              <div className="bg-[#1a1a1a] border border-[#2a2a2a] rounded-xl p-4 space-y-2.5">
+              <div className="rounded-xl p-4 space-y-2.5" style={{ background: '#1c1c1e' }}>
                 <div className="flex justify-between items-center">
                   <span className="text-white/50 text-xs font-semibold">Withdraw Fee</span>
                   <span className="text-white text-xs font-bold">{networkFee} AXN</span>
@@ -235,7 +243,8 @@ export default function WithdrawalPopup({ open, onOpenChange, tonBalance }: With
 
               <button
                 onClick={() => onOpenChange(false)}
-                className="w-full text-white/40 text-xs font-bold uppercase tracking-wider py-2 hover:text-white/60 transition-colors"
+                className="w-full h-11 rounded-2xl font-bold text-sm text-white/50 active:scale-[0.97] transition-transform"
+                style={{ background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.06)' }}
               >
                 Close
               </button>
@@ -257,17 +266,33 @@ export default function WithdrawalPopup({ open, onOpenChange, tonBalance }: With
           >
             <div className="absolute inset-0 bg-black/80 backdrop-blur-sm" />
             <motion.div
-              className="relative w-full max-w-xs bg-[#0f0f0f] border border-white/10 rounded-2xl overflow-hidden"
+              className="relative w-full max-w-xs rounded-3xl overflow-hidden"
+              style={{ background: '#0a0a0a', border: '1px solid #1c1c1e' }}
               initial={{ scale: 0.94, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.94, opacity: 0 }}
               transition={{ type: "spring", damping: 26, stiffness: 300 }}
             >
+              {/* Header with Back + Close */}
+              <div className="flex items-center justify-between px-4 pt-4 pb-3 border-b border-[#1c1c1e]">
+                <button
+                  onClick={() => setShowAdPopup(false)}
+                  className="w-7 h-7 rounded-xl bg-[#1c1c1e] flex items-center justify-center active:scale-90 transition-transform"
+                >
+                  <ArrowLeft className="w-3.5 h-3.5 text-white/60" />
+                </button>
+                <span className="text-white font-black text-sm uppercase tracking-wider">Almost There!</span>
+                <button
+                  onClick={() => setShowAdPopup(false)}
+                  className="w-7 h-7 rounded-xl bg-[#1c1c1e] flex items-center justify-center active:scale-90 transition-transform"
+                >
+                  <X className="w-3.5 h-3.5 text-white/60" />
+                </button>
+              </div>
               <div className="px-5 py-5">
                 <div className="w-12 h-12 flex items-center justify-center mx-auto mb-3">
                   <MdOndemandVideo className="w-10 h-10" style={{ color: "#34d399" }} />
                 </div>
-                <h2 className="text-white font-black text-base text-center tracking-wide mb-1.5">Almost There!</h2>
                 <p className="text-white/50 text-xs leading-relaxed text-center mb-1">
                   Watch <span className="text-yellow-400 font-black">{adsRequiredCount} ads</span> to unlock your withdrawal.
                 </p>
@@ -288,16 +313,26 @@ export default function WithdrawalPopup({ open, onOpenChange, tonBalance }: With
                     />
                   </div>
                 </div>
-                <button
-                  onClick={() => {
-                    setShowAdPopup(false);
-                    onOpenChange(false);
-                    setLocation("/");
-                  }}
-                  className="w-full h-10 bg-white/6 border border-white/10 text-white/60 rounded-xl font-black text-xs uppercase tracking-widest transition-all active:scale-[0.98] hover:text-white/80"
-                >
-                  Close
-                </button>
+                <div className="grid grid-cols-2 gap-2">
+                  <button
+                    onClick={() => setShowAdPopup(false)}
+                    className="h-10 rounded-xl font-black text-xs uppercase tracking-widest text-white/50 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
+                    style={{ background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.06)' }}
+                  >
+                    <ArrowLeft className="w-3 h-3" /> Back
+                  </button>
+                  <button
+                    onClick={() => {
+                      setShowAdPopup(false);
+                      onOpenChange(false);
+                      setLocation("/");
+                    }}
+                    className="h-10 rounded-xl font-black text-xs uppercase tracking-widest text-white/50 transition-all active:scale-[0.98] flex items-center justify-center gap-1.5"
+                    style={{ background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.06)' }}
+                  >
+                    <X className="w-3 h-3" /> Close
+                  </button>
+                </div>
               </div>
             </motion.div>
           </motion.div>
