@@ -50,7 +50,10 @@ export default function MenuPopup({ onClose, onOpenInvite }: MenuPopupProps) {
   const withdrawals = txData?.withdrawals || [];
   const currentLang = SUPPORTED_LANGUAGES.find(l => l.code === language) || SUPPORTED_LANGUAGES[0];
   const firstName: string = user?.firstName || user?.username || "User";
-  const profileImageUrl: string | null = user?.profileImageUrl || null;
+  const profileImageUrl: string | null =
+    user?.profileImageUrl ||
+    (typeof window !== "undefined" && (window as any).Telegram?.WebApp?.initDataUnsafe?.user?.photo_url) ||
+    null;
   const initials = firstName.slice(0, 2).toUpperCase();
   const joinedAt = user?.createdAt ? format(new Date(user.createdAt), "MMM d, yyyy") : null;
 
@@ -72,11 +75,11 @@ export default function MenuPopup({ onClose, onOpenInvite }: MenuPopupProps) {
       className="fixed inset-0 z-[200] flex items-center justify-center px-4"
       initial={{ opacity: 0 }} animate={{ opacity: 1 }} exit={{ opacity: 0 }}
     >
-      <div className="absolute inset-0 bg-black/70 backdrop-blur-sm" onClick={onClose} />
+      <div className="absolute inset-0 bg-black/60 backdrop-blur-md" onClick={onClose} />
 
       <motion.div
         className="relative w-full max-w-sm rounded-3xl overflow-hidden"
-        style={{ background: "#0a0a0a", border: "1px solid #1c1c1e" }}
+        style={{ background: "#0d0f14", border: "1px solid #22252d" }}
         initial={{ scale: 0.88, opacity: 0, y: 20 }}
         animate={{ scale: 1, opacity: 1, y: 0 }}
         exit={{ scale: 0.88, opacity: 0, y: 20 }}
@@ -93,9 +96,9 @@ export default function MenuPopup({ onClose, onOpenInvite }: MenuPopupProps) {
           {/* ── MAIN MENU (sets card height) ── */}
           <div style={{ visibility: overlay ? "hidden" : "visible" }}>
             {/* Profile */}
-            <div className="px-5 py-4 border-b border-[#1c1c1e]">
+            <div className="px-5 py-4 border-b border-[#22252d]">
               <div className="flex items-center gap-3">
-                <div className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center flex-shrink-0 bg-[#1c1c1e]">
+                <div className="w-12 h-12 rounded-2xl overflow-hidden flex items-center justify-center flex-shrink-0 bg-[#22252d]">
                   {profileImageUrl
                     ? <img src={profileImageUrl} alt={firstName} className="w-full h-full object-cover"
                         onError={e => { (e.target as HTMLImageElement).style.display = "none"; }} />
@@ -148,7 +151,7 @@ export default function MenuPopup({ onClose, onOpenInvite }: MenuPopupProps) {
                 exit={{ opacity: 0, x: 24 }}
                 transition={{ duration: 0.18, ease: "easeOut" }}
                 className="absolute inset-0 flex flex-col"
-                style={{ background: "#0a0a0a" }}
+                style={{ background: "#0d0f14" }}
               >
                 {/* Scrollable content */}
                 <div className="flex-1 overflow-y-auto min-h-0">
@@ -212,7 +215,7 @@ export default function MenuPopup({ onClose, onOpenInvite }: MenuPopupProps) {
                           <p className="text-white/25 text-xs font-bold uppercase tracking-widest">No transactions yet</p>
                         </div>
                       ) : withdrawals.map((w: any) => (
-                        <div key={w.id} className="bg-[#141414] border border-white/5 rounded-2xl p-3.5 flex items-center gap-3">
+                        <div key={w.id} className="bg-[#1a1c22] border border-white/5 rounded-2xl p-3.5 flex items-center gap-3">
                           <div className="w-9 h-9 rounded-xl bg-white/5 flex items-center justify-center flex-shrink-0">{getStatusIcon(w.status)}</div>
                           <div className="flex-1 min-w-0">
                             <p className="text-white text-xs font-black uppercase">{w.method || "Withdrawal"}</p>
@@ -271,7 +274,7 @@ export default function MenuPopup({ onClose, onOpenInvite }: MenuPopupProps) {
                         { q: "When can I withdraw?", a: "Once you reach the minimum withdrawal amount. Check balance bar for eligibility." },
                         { q: "Why was my account banned?", a: "Bans happen for multiple accounts, self-referrals, or exploiting bugs. Contact support if it was a mistake." },
                       ].map((faq, i) => (
-                        <div key={i} className="bg-[#141414] border border-white/5 rounded-2xl p-3.5">
+                        <div key={i} className="bg-[#1a1c22] border border-white/5 rounded-2xl p-3.5">
                           <p className="text-white font-bold text-xs mb-1.5">{faq.q}</p>
                           <p className="text-white/45 text-xs leading-relaxed">{faq.a}</p>
                         </div>
@@ -281,11 +284,11 @@ export default function MenuPopup({ onClose, onOpenInvite }: MenuPopupProps) {
                 </div>
 
                 {/* Back button — pinned at bottom */}
-                <div className="flex-shrink-0 px-4 py-3 border-t border-[#1c1c1e]">
+                <div className="flex-shrink-0 px-4 py-3 border-t border-[#22252d]">
                   <button
                     onClick={() => setOverlay(null)}
                     className="w-full h-10 rounded-2xl flex items-center justify-center gap-2 text-white/50 text-sm font-black uppercase tracking-wider active:scale-[0.97] transition-all"
-                    style={{ background: "#1c1c1e", border: "1px solid rgba(255,255,255,0.06)" }}
+                    style={{ background: "#22252d", border: "1px solid rgba(255,255,255,0.06)" }}
                   >
                     <ArrowLeft className="w-4 h-4" />
                     Back
@@ -326,7 +329,7 @@ function StatSection({ label, children }: { label: string; children: React.React
 
 function StatCard({ icon, label, value, live, wide }: { icon: React.ReactNode; label: string; value: string; live?: boolean; wide?: boolean }) {
   return (
-    <div className={`bg-[#141414] border border-white/5 rounded-2xl p-3 ${wide ? "col-span-2" : ""}`}>
+    <div className={`bg-[#1a1c22] border border-white/5 rounded-2xl p-3 ${wide ? "col-span-2" : ""}`}>
       <div className="flex items-center gap-1.5 mb-1.5">
         {icon}
         {live && <span className="w-1.5 h-1.5 rounded-full bg-green-400 animate-pulse" />}
@@ -339,7 +342,7 @@ function StatCard({ icon, label, value, live, wide }: { icon: React.ReactNode; l
 
 function LegalBlock({ icon, title, children }: { icon: React.ReactNode; title: string; children: React.ReactNode }) {
   return (
-    <div className="bg-[#141414] border border-white/5 rounded-2xl p-4">
+    <div className="bg-[#1a1c22] border border-white/5 rounded-2xl p-4">
       <p className="text-white font-black text-xs mb-2 flex items-center gap-1.5">{icon}{title}</p>
       <div className="text-white/45 text-xs leading-relaxed space-y-1">{children}</div>
     </div>

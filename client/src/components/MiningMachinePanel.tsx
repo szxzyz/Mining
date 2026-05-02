@@ -143,7 +143,7 @@ function MiningTerminal({ isMining, miningRate, mined, machineStopped, noEnergy 
   }, [isMining, miningRate]);
 
   return (
-    <div className="relative w-full rounded-xl overflow-hidden" style={{ height: 130 }}>
+    <div className="relative w-full rounded-xl overflow-hidden" style={{ height: 90 }}>
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ display: "block" }} />
       <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.62)" }} />
       <div
