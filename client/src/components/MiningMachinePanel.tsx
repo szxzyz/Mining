@@ -143,7 +143,7 @@ function MiningTerminal({ isMining, miningRate, mined, machineStopped, noEnergy 
   }, [isMining, miningRate]);
 
   return (
-    <div className="relative w-full rounded-xl overflow-hidden" style={{ height: 90 }}>
+    <div className="relative w-full rounded-xl overflow-hidden" style={{ height: 130 }}>
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ display: "block" }} />
       <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.62)" }} />
       <div
@@ -352,6 +352,7 @@ export default function MiningMachinePanel() {
 
   return (
     <div className="w-full">
+      <p className="text-center text-[10px] font-black uppercase tracking-[0.15em] text-white/30 mb-2">AXN Mining Machine</p>
 
       <div className="bg-[#0d0f14] border border-[#22252d] rounded-2xl overflow-hidden">
 
