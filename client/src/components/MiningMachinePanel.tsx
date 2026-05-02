@@ -143,7 +143,7 @@ function MiningTerminal({ isMining, miningRate, mined, machineStopped, noEnergy 
   }, [isMining, miningRate]);
 
   return (
-    <div className="relative w-full rounded-xl overflow-hidden" style={{ height: 130 }}>
+    <div className="relative w-full rounded-xl overflow-hidden" style={{ height: 90 }}>
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ display: "block" }} />
       <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.62)" }} />
       <div
@@ -320,7 +320,7 @@ export default function MiningMachinePanel() {
     return (
       <div className="w-full space-y-3">
         <p className="text-center text-[10px] font-black uppercase tracking-[0.15em] text-white/30 mb-1">AXN Mining Machine</p>
-        <div className="bg-[#000000] border border-[#1c1c1e] rounded-2xl overflow-hidden animate-pulse">
+        <div className="bg-[#0d0f14] border border-[#22252d] rounded-2xl overflow-hidden animate-pulse">
           <div className="h-[130px] bg-white/[0.02]" />
           <div className="px-4 py-4 space-y-3">
             <div className="h-2 bg-white/[0.04] rounded-full" />
@@ -354,10 +354,10 @@ export default function MiningMachinePanel() {
     <div className="w-full space-y-3">
       <p className="text-center text-[10px] font-black uppercase tracking-[0.15em] text-white/30 mb-1">AXN Mining Machine</p>
 
-      <div className="bg-[#000000] border border-[#1c1c1e] rounded-2xl overflow-hidden">
+      <div className="bg-[#0d0f14] border border-[#22252d] rounded-2xl overflow-hidden">
 
         {/* Antivirus Status Bar — only protects balance */}
-        <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-[#1c1c1e]">
+        <div className="flex items-center justify-between px-4 pt-2 pb-2 border-b border-[#22252d]">
           {state.antivirusActive ? (
             <div className="flex items-center gap-2">
               <Shield className="w-3.5 h-3.5 text-green-400" />
@@ -382,7 +382,7 @@ export default function MiningMachinePanel() {
         </div>
 
         {/* Level Labels Row */}
-        <div className="flex items-center justify-center gap-3 px-4 py-2 border-b border-[#1c1c1e]">
+        <div className="flex items-center justify-center gap-3 px-4 py-1.5 border-b border-[#22252d]">
           <div className="flex items-center gap-1">
             <Activity className="w-3 h-3 text-[#F5C542]/60" />
             <span className="text-[#F5C542]/70 text-[10px] font-bold uppercase tracking-wide">Mining</span>
@@ -403,7 +403,7 @@ export default function MiningMachinePanel() {
         </div>
 
         {/* Matrix Terminal */}
-        <div className="px-3 pt-3 pb-2">
+        <div className="px-3 pt-2 pb-1.5">
           <MiningTerminal
             isMining={isMining}
             miningRate={state.miningRate}
@@ -413,12 +413,12 @@ export default function MiningMachinePanel() {
           />
         </div>
 
-        <div className="border-t border-[#1c1c1e] mx-4" />
+        <div className="border-t border-[#22252d] mx-4" />
 
-        <div className="px-4 py-4">
+        <div className="px-4 py-3">
 
           {/* Capacity Progress */}
-          <div className="mb-4">
+          <div className="mb-2.5">
             <div className="flex justify-between items-center mb-1.5">
               <div className="flex items-center gap-1.5">
                 <HardDrive className="w-3 h-3 text-[#F5C542]" />
@@ -439,13 +439,13 @@ export default function MiningMachinePanel() {
           </div>
 
           {/* Stats Row */}
-          <div className="grid grid-cols-3 gap-2 mb-4">
-            <div className="bg-[#1c1c1e] rounded-xl p-2.5 text-center">
+          <div className="grid grid-cols-3 gap-2 mb-2.5">
+            <div className="bg-[#22252d] rounded-xl p-2 text-center">
               <Activity className="w-3.5 h-3.5 text-[#F5C542] mx-auto mb-1" />
               <p className="text-white text-xs font-black tabular-nums">{state.miningRate}/s</p>
               <p className="text-white/30 text-[9px] uppercase tracking-wide mt-0.5">Rate</p>
             </div>
-            <div className="bg-[#1c1c1e] rounded-xl p-2.5 text-center">
+            <div className="bg-[#22252d] rounded-xl p-2 text-center">
               <Cpu className="w-3.5 h-3.5 text-blue-400 mx-auto mb-1" />
               <p className={`text-xs font-black tabular-nums ${state.cpuRunning ? 'text-blue-300' : 'text-white/40'}`}>
                 {state.cpuRunning ? formatTime(cpuCountdown) : 'Idle'}
@@ -455,7 +455,7 @@ export default function MiningMachinePanel() {
             {/* Health — always decreases naturally, unrelated to antivirus */}
             <button
               onClick={() => setRepairOpen(true)}
-              className="bg-[#1c1c1e] rounded-xl p-2.5 text-center active:scale-95 transition-transform"
+              className="bg-[#22252d] rounded-xl p-2 text-center active:scale-95 transition-transform"
             >
               <Wrench className="w-3.5 h-3.5 mx-auto mb-1" style={{ color: healthColor }} />
               <p className="text-xs font-black tabular-nums" style={{ color: healthColor }}>
@@ -473,7 +473,7 @@ export default function MiningMachinePanel() {
 
           {/* Energy Bar */}
           <div
-            className="flex items-center gap-3 bg-[#1c1c1e] rounded-xl px-3 py-2.5 mb-4 cursor-pointer active:scale-[0.99] transition-transform"
+            className="flex items-center gap-3 bg-[#22252d] rounded-xl px-3 py-2 mb-2.5 cursor-pointer active:scale-[0.99] transition-transform"
             onClick={() => { if (!state.cpuRunning && !state.hasEnergy) setEnergyOpen(true); }}
           >
             <div className="flex items-center gap-1.5 flex-1">
@@ -549,7 +549,7 @@ export default function MiningMachinePanel() {
                     ? state.hasEnergy
                       ? { background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: '#fff', boxShadow: '0 0 14px rgba(59,130,246,0.3)' }
                       : { background: 'linear-gradient(135deg,#F5C542,#d4920a)', color: '#000' }
-                    : { background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.25)' }
+                    : { background: '#22252d', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.25)' }
                 }
               >
                 {startCpuMutation.isPending ? (
@@ -572,7 +572,7 @@ export default function MiningMachinePanel() {
                   color: '#000',
                   boxShadow: '0 0 14px rgba(245,197,66,0.3)',
                 } : {
-                  background: '#1c1c1e',
+                  background: '#22252d',
                   border: '1px solid rgba(255,255,255,0.08)',
                   color: 'rgba(255,255,255,0.25)',
                 }}
@@ -582,7 +582,7 @@ export default function MiningMachinePanel() {
             </div>
 
             {/* Secondary: Repair / Antivirus / Upgrade — original card list style */}
-            <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)', background: '#141414' }}>
+            <div className="rounded-2xl overflow-hidden" style={{ border: '1px solid rgba(255,255,255,0.06)', background: '#1a1c22' }}>
               <button
                 onClick={() => setRepairOpen(true)}
                 className="w-full flex items-center justify-between px-4 py-3 active:bg-white/5 transition-all"
