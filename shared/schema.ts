@@ -374,6 +374,7 @@ export const userMachines = pgTable("user_machines", {
   cpuEndTime: timestamp("cpu_end_time"),
   lastClaimTime: timestamp("last_claim_time").defaultNow(),
   lastVirusAttack: timestamp("last_virus_attack"),
+  lastHealthDecay: timestamp("last_health_decay"),
   createdAt: timestamp("created_at").defaultNow(),
   updatedAt: timestamp("updated_at").defaultNow(),
 });
