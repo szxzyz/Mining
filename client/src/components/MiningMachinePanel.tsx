@@ -143,11 +143,11 @@ function MiningTerminal({ isMining, miningRate, mined, machineStopped, noEnergy 
   }, [isMining, miningRate]);
 
   return (
-    <div className="relative w-full overflow-hidden" style={{ height: 160 }}>
+    <div className="relative w-full overflow-hidden" style={{ height: 152 }}>
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ display: "block" }} />
       <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.62)" }} />
       <div
-        className="absolute inset-0 overflow-hidden px-3 py-2 flex flex-col justify-end"
+        className="absolute inset-0 overflow-hidden px-3 pb-1 pt-1 flex flex-col justify-end"
         style={{ fontFamily: "monospace" }}
       >
         {machineStopped ? (
@@ -170,7 +170,14 @@ function MiningTerminal({ isMining, miningRate, mined, machineStopped, noEnergy 
           </div>
         ) : (
           <>
-            <div style={{ fontSize: "9.5px", lineHeight: "1.45" }}>
+            <div className="flex items-center justify-center gap-2 mb-1 text-[9px] font-black uppercase tracking-[0.18em]">
+              <span className="text-[#F5C542]">Machine</span>
+              <span className="text-white/15">|</span>
+              <span className="text-blue-400">CAP</span>
+              <span className="text-white/15">|</span>
+              <span className="text-purple-400">CPU</span>
+            </div>
+            <div style={{ fontSize: "9.5px", lineHeight: "1.25" }}>
               {logs.slice(-7).map((line, i) => {
                 const isReward = line.includes("reward:");
                 const isGpu = line.includes("gpu[");
@@ -366,34 +373,36 @@ export default function MiningMachinePanel() {
     <div className="w-full flex flex-col">
 
       {/* Level Labels Row — full width, no card */}
-      <div className="flex items-center justify-center gap-4 px-4 py-2.5 border-b border-white/[0.06]">
+      <div className="flex items-center justify-center gap-3 px-4 py-1 border-b border-white/[0.06]">
         <div className="flex items-center gap-1.5">
           <Activity className="w-3 h-3 text-[#F5C542]/70" />
-          <span className="text-[#F5C542]/60 text-[10px] font-bold uppercase tracking-wide">Mining</span>
-          <span className="text-[#F5C542] text-[10px] font-black tabular-nums">Lv.{state.miningLevel}</span>
+          <span className="text-[#F5C542]/60 text-[9px] font-bold uppercase tracking-wide">Mining</span>
+          <span className="text-[#F5C542] text-[9px] font-black tabular-nums">Lv.{state.miningLevel}</span>
         </div>
         <span className="text-white/10 text-xs">|</span>
         <div className="flex items-center gap-1.5">
           <HardDrive className="w-3 h-3 text-blue-400/70" />
-          <span className="text-blue-400/60 text-[10px] font-bold uppercase tracking-wide">Capacity</span>
-          <span className="text-blue-400 text-[10px] font-black tabular-nums">Lv.{state.capacityLevel}</span>
+          <span className="text-blue-400/60 text-[9px] font-bold uppercase tracking-wide">Capacity</span>
+          <span className="text-blue-400 text-[9px] font-black tabular-nums">Lv.{state.capacityLevel}</span>
         </div>
         <span className="text-white/10 text-xs">|</span>
         <div className="flex items-center gap-1.5">
           <Cpu className="w-3 h-3 text-purple-400/70" />
-          <span className="text-purple-400/60 text-[10px] font-bold uppercase tracking-wide">CPU</span>
-          <span className="text-purple-400 text-[10px] font-black tabular-nums">Lv.{state.cpuLevel}</span>
+          <span className="text-purple-400/60 text-[9px] font-bold uppercase tracking-wide">CPU</span>
+          <span className="text-purple-400 text-[9px] font-black tabular-nums">Lv.{state.cpuLevel}</span>
         </div>
       </div>
 
       {/* Matrix Terminal — full width */}
-      <MiningTerminal
+      <div className="-mt-2">
+        <MiningTerminal
         isMining={isMining}
         miningRate={state.miningRate}
         mined={localMined}
         machineStopped={machineStopped}
         noEnergy={noEnergy && !machineStopped}
-      />
+        />
+      </div>
 
       {/* Content below terminal */}
       <div className="px-4 pt-3 pb-4 space-y-3">
