@@ -810,6 +810,20 @@ export class DatabaseStorage implements IStorage {
     }
   }
 
+  async activateAntivirusFree(userId: string): Promise<{ success: boolean; active: boolean; message: string }> {
+    const machine = await this.getOrCreateMachine(userId);
+    if (machine.antivirusActive) {
+      return { success: false, active: true, message: 'Antivirus is already active.' };
+    }
+    const now = new Date();
+    await db.update(userMachines).set({
+      antivirusActive: true,
+      lastVirusAttack: null,
+      updatedAt: now,
+    }).where(eq(userMachines.userId, userId));
+    return { success: true, active: true, message: 'Antivirus activated for free!' };
+  }
+
   async upgradeSubsystem(userId: string, type: 'mining' | 'capacity' | 'cpu'): Promise<{ success: boolean; newLevel: number; message: string }> {
     const machine = await this.getOrCreateMachine(userId);
     const currentLevel = type === 'mining' ? machine.miningLevel
