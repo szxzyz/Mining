@@ -17,7 +17,7 @@ export default function Layout({ children, hideNav }: LayoutProps) {
 
   return (
     <div
-      className="bg-[#0d0f14] text-foreground font-sans selection:bg-[#4cd3ff]/30 relative"
+      className="bg-[#000000] text-foreground font-sans selection:bg-[#4cd3ff]/30 relative"
       style={{
         height: '100dvh',
         width: '100%',
@@ -46,7 +46,7 @@ export default function Layout({ children, hideNav }: LayoutProps) {
           className="fixed bottom-0 left-0 right-0 z-50"
           style={{
             paddingBottom: "max(env(safe-area-inset-bottom), 8px)",
-            background: "#0d0f14",
+            background: "#000000",
             borderTop: "1px solid rgba(255,255,255,0.05)",
           }}
         >
