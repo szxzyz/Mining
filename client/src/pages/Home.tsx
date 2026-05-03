@@ -1098,7 +1098,15 @@ export default function Home() {
         )}
       </AnimatePresence>
 
-      <main className="max-w-md mx-auto px-4 pb-20" style={{ paddingTop: headerHeight + 8 }}>
+      <main
+        className="w-full pb-24 overflow-y-auto"
+        style={{
+          paddingTop: headerHeight,
+          minHeight: '100dvh',
+          maxHeight: '100dvh',
+          overscrollBehavior: 'contain',
+        }}
+      >
         <MiningMachinePanel />
       </main>
 
