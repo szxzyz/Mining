@@ -33,7 +33,7 @@ const PageLoader = memo(function PageLoader() {
 
 function LoadingFallback() {
   return (
-    <div className="flex flex-col items-center justify-center min-h-screen bg-[#0a0a0a]">
+    <div className="flex flex-col items-center justify-center min-h-screen bg-[#000000]">
       <div className="absolute w-72 h-72 bg-[#F5C542]/4 rounded-full blur-[120px]" />
       <div className="relative flex flex-col items-center gap-8 z-10">
         <div className="relative w-24 h-24 flex items-center justify-center">
