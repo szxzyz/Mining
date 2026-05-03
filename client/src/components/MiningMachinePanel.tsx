@@ -3,14 +3,13 @@ import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { motion, AnimatePresence } from "framer-motion";
 import {
   Zap, Shield, ShieldOff, Cpu, HardDrive, Activity,
-  Wrench, Play, AlertTriangle, Loader2, ChevronRight, Settings
+  Wrench, Play,
+  Loader2, AlertTriangle
 } from "lucide-react";
 import { showNotification } from "@/components/AppNotification";
 import { apiRequest } from "@/lib/queryClient";
 import RepairPopup from "@/components/RepairPopup";
-import AntivirusPopup, { getAvDurationMs } from "@/components/AntivirusPopup";
-import UpgradeMachinePopup from "@/components/UpgradeMachinePopup";
-import EnergyPopup from "@/components/EnergyPopup";
+import AntivirusPopup, { AV_DURATION_MS } from "@/components/AntivirusPopup";
 
 interface MachineState {
   miningLevel: number;
@@ -35,10 +34,10 @@ interface MachineState {
   balance: number;
   pendingVirusDamage: number;
   nextVirusIn: number;
-  lastVirusAttack: string | null;
 }
 
 const AV_ACTIVE_KEY = "av_activated_at";
+const AV_DURATION_SECONDS = AV_DURATION_MS / 1000;
 
 function formatTime(seconds: number): string {
   if (seconds <= 0) return "00:00";
@@ -76,12 +75,11 @@ function makelog(miningRate: number, mined: number): string {
   return `${ts} stratum: accepted  diff=512K  ${hs}MH`;
 }
 
-function MiningTerminal({ isMining, miningRate, mined, machineStopped, noEnergy }: {
+function MiningTerminal({ isMining, miningRate, mined, machineStopped }: {
   isMining: boolean;
   miningRate: number;
   mined: number;
   machineStopped: boolean;
-  noEnergy: boolean;
 }) {
   const canvasRef = useRef<HTMLCanvasElement>(null);
   const [logs, setLogs] = useState<string[]>([]);
@@ -94,7 +92,7 @@ function MiningTerminal({ isMining, miningRate, mined, machineStopped, noEnergy 
     const ctx = canvas.getContext("2d");
     if (!ctx) return;
     const W = canvas.offsetWidth || 360;
-    const H = canvas.offsetHeight || 160;
+    const H = canvas.offsetHeight || 130;
     canvas.width = W;
     canvas.height = H;
     const fontSize = 10;
@@ -115,8 +113,6 @@ function MiningTerminal({ isMining, miningRate, mined, machineStopped, noEnergy 
           const rng = Math.random();
           ctx.fillStyle = machineStopped
             ? rng > 0.93 ? "#fff" : rng > 0.55 ? "#ef4444" : "#7f1d1d"
-            : noEnergy
-            ? rng > 0.93 ? "#fff" : rng > 0.55 ? "#F5C542" : "#78540a"
             : rng > 0.93 ? "#fff" : rng > 0.55 ? "#39ff14" : "#00960a";
           ctx.font = `${fontSize}px monospace`;
           ctx.fillText(ch, x, y);
@@ -128,7 +124,7 @@ function MiningTerminal({ isMining, miningRate, mined, machineStopped, noEnergy 
     };
     rafRef.current = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(rafRef.current);
-  }, [machineStopped, noEnergy]);
+  }, [machineStopped]);
 
   useEffect(() => {
     if (!isMining) return;
@@ -143,11 +139,11 @@ function MiningTerminal({ isMining, miningRate, mined, machineStopped, noEnergy 
   }, [isMining, miningRate]);
 
   return (
-    <div className="relative w-full overflow-hidden" style={{ height: 152 }}>
+    <div className="relative w-full rounded-xl overflow-hidden" style={{ height: 130 }}>
       <canvas ref={canvasRef} className="absolute inset-0 w-full h-full" style={{ display: "block" }} />
       <div className="absolute inset-0" style={{ background: "rgba(0,0,0,0.62)" }} />
       <div
-        className="absolute inset-0 overflow-hidden px-3 pb-1 pt-1 flex flex-col justify-end"
+        className="absolute inset-0 overflow-hidden px-2 py-1.5 flex flex-col justify-end"
         style={{ fontFamily: "monospace" }}
       >
         {machineStopped ? (
@@ -157,27 +153,13 @@ function MiningTerminal({ isMining, miningRate, mined, machineStopped, noEnergy 
               Machine stopped — repair required to resume mining
             </span>
           </div>
-        ) : noEnergy ? (
-          <div className="flex-1 flex flex-col items-center justify-center gap-2">
-            <Zap className="w-6 h-6 text-[#F5C542]" />
-            <span style={{ color: "#F5C542", fontSize: 11, fontWeight: 700, textAlign: "center" }}>
-              Energy required — refill to continue mining
-            </span>
-          </div>
         ) : !isMining ? (
           <div className="flex-1 flex items-center justify-center">
             <span style={{ color: "rgba(255,255,255,0.2)", fontSize: 11 }}>— idle —</span>
           </div>
         ) : (
           <>
-            <div className="flex items-center justify-center gap-2 mb-1 text-[9px] font-black uppercase tracking-[0.18em]">
-              <span className="text-[#F5C542]">Machine</span>
-              <span className="text-white/15">|</span>
-              <span className="text-blue-400">CAP</span>
-              <span className="text-white/15">|</span>
-              <span className="text-purple-400">CPU</span>
-            </div>
-            <div style={{ fontSize: "9.5px", lineHeight: "1.25" }}>
+            <div style={{ fontSize: "9.5px", lineHeight: "1.45" }}>
               {logs.slice(-7).map((line, i) => {
                 const isReward = line.includes("reward:");
                 const isGpu = line.includes("gpu[");
@@ -205,10 +187,8 @@ export default function MiningMachinePanel() {
   const [cpuCountdown, setCpuCountdown] = useState(0);
   const [repairOpen, setRepairOpen] = useState(false);
   const [antivirusOpen, setAntivirusOpen] = useState(false);
-  const [upgradeOpen, setUpgradeOpen] = useState(false);
-  const [energyOpen, setEnergyOpen] = useState(false);
 
-  const { data: state } = useQuery<MachineState>({
+  const { data: state, isLoading } = useQuery<MachineState>({
     queryKey: ["/api/axn-mining/state"],
     refetchInterval: 15000,
     retry: false,
@@ -246,46 +226,32 @@ export default function MiningMachinePanel() {
     return () => clearInterval(t);
   }, [state?.cpuRunning, state?.miningRate, state?.capacity, state?.machineHealth]);
 
+  const [avSecondsLeft, setAvSecondsLeft] = useState(0);
   const avIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
 
-  // ── Virus attack tracking ──────────────────────────────────────
-  const prevVirusDamageRef = useRef<number>(0);
-  const [virusCountdown, setVirusCountdown] = useState(0);
-
-  // Detect new virus attacks and fire a notification
-  useEffect(() => {
-    if (!state) return;
-    const prev = prevVirusDamageRef.current;
-    const curr = state.pendingVirusDamage;
-    if (curr > prev && prev >= 0) {
-      const hit = curr - prev;
-      showNotification(`🦠 Virus stole ${hit} AXN from your balance! Activate antivirus to stop theft.`, "error");
-    }
-    prevVirusDamageRef.current = curr;
-  }, [state?.pendingVirusDamage]);
-
-  // Sync virus countdown from server on every poll
-  useEffect(() => {
-    if (!state || state.antivirusActive) {
-      setVirusCountdown(0);
-      return;
-    }
-    setVirusCountdown(state.nextVirusIn);
-  }, [state?.nextVirusIn, state?.antivirusActive]);
-
-  // Tick down virus countdown locally between polls
-  useEffect(() => {
-    if (virusCountdown <= 0) return;
-    const t = setInterval(() => setVirusCountdown(p => Math.max(0, p - 1)), 1000);
-    return () => clearInterval(t);
-  }, [virusCountdown > 0]);
-  // ──────────────────────────────────────────────────────────────
+  const startAvCountdown = useCallback((activatedAt: number) => {
+    if (avIntervalRef.current) clearInterval(avIntervalRef.current);
+    const tick = () => {
+      const elapsed = Math.floor((Date.now() - activatedAt) / 1000);
+      const remaining = AV_DURATION_SECONDS - elapsed;
+      if (remaining <= 0) {
+        setAvSecondsLeft(0);
+        if (avIntervalRef.current) clearInterval(avIntervalRef.current);
+        antivirusDeactivateMutation.mutate();
+      } else {
+        setAvSecondsLeft(remaining);
+      }
+    };
+    tick();
+    avIntervalRef.current = setInterval(tick, 1000);
+  }, []);
 
   const antivirusDeactivateMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/axn-mining/toggle-antivirus").then(r => r.json()),
     onSuccess: () => {
       localStorage.removeItem(AV_ACTIVE_KEY);
       if (avIntervalRef.current) clearInterval(avIntervalRef.current);
+      setAvSecondsLeft(0);
       queryClient.refetchQueries({ queryKey: ["/api/axn-mining/state"] });
     },
     onError: () => {},
@@ -294,27 +260,24 @@ export default function MiningMachinePanel() {
   useEffect(() => {
     if (!state) return;
     if (state.antivirusActive) {
-      // AV level = min of all three machine levels — all must be equal for duration to increase
-      const avLevel = Math.min(state.miningLevel, state.capacityLevel, state.cpuLevel);
-      const avDurationSeconds = getAvDurationMs(avLevel) / 1000;
       const stored = localStorage.getItem(AV_ACTIVE_KEY);
       if (stored) {
         const activatedAt = parseInt(stored, 10);
         const elapsed = Math.floor((Date.now() - activatedAt) / 1000);
-        if (elapsed >= avDurationSeconds) {
+        if (elapsed < AV_DURATION_SECONDS) {
+          startAvCountdown(activatedAt);
+        } else {
           localStorage.removeItem(AV_ACTIVE_KEY);
           antivirusDeactivateMutation.mutate();
         }
       } else {
         const now = Date.now();
         localStorage.setItem(AV_ACTIVE_KEY, String(now));
-        const avDurationMs = getAvDurationMs(avLevel);
-        setTimeout(() => {
-          antivirusDeactivateMutation.mutate();
-        }, avDurationMs);
+        startAvCountdown(now);
       }
     } else {
       if (avIntervalRef.current) clearInterval(avIntervalRef.current);
+      setAvSecondsLeft(0);
       localStorage.removeItem(AV_ACTIVE_KEY);
     }
   }, [state?.antivirusActive]);
@@ -340,28 +303,26 @@ export default function MiningMachinePanel() {
     onError: (e: any) => showNotification(e.message || "Nothing to collect", "error"),
   });
 
-  if (!state) {
+  const refillMutation = useMutation({
+    mutationFn: () => apiRequest("POST", "/api/axn-mining/refill-energy").then(r => r.json()),
+    onSuccess: (d) => { showNotification(d.message, "success"); invalidate(); },
+    onError: (e: any) => showNotification(e.message || "Failed", "error"),
+  });
+
+  if (isLoading) {
     return (
-      <div className="w-full animate-pulse space-y-3 px-4 pt-4">
-        <div className="h-[160px] bg-white/[0.03] rounded-xl" />
-        <div className="h-2 bg-white/[0.04] rounded-full" />
-        <div className="grid grid-cols-3 gap-2">
-          {[0,1,2].map(i => <div key={i} className="h-14 bg-white/[0.04] rounded-xl" />)}
-        </div>
-        <div className="h-12 bg-white/[0.04] rounded-xl" />
-        <div className="grid grid-cols-2 gap-2">
-          <div className="h-11 bg-white/[0.04] rounded-xl" />
-          <div className="h-11 bg-white/[0.04] rounded-xl" />
-        </div>
+      <div className="flex items-center justify-center py-12">
+        <Loader2 className="w-6 h-6 animate-spin text-[#F5C542]" />
       </div>
     );
   }
+
+  if (!state) return null;
 
   const capacityPct = Math.min(100, (localMined / state.capacity) * 100);
   const healthColor = state.machineHealth > 60 ? "#22c55e" : state.machineHealth > 30 ? "#f59e0b" : "#ef4444";
   const canClaim = localMined >= 0.01;
   const machineStopped = state.machineHealth <= 0;
-  const noEnergy = !state.hasEnergy && !state.cpuRunning;
 
   const energyPct = state.cpuRunning
     ? Math.max(0, Math.round((cpuCountdown / state.cpuDurationSec) * 100))
@@ -370,283 +331,239 @@ export default function MiningMachinePanel() {
   const isMining = state.cpuRunning && state.machineHealth > 0;
 
   return (
-    <div className="w-full flex flex-col">
+    <div className="w-full space-y-3">
+      {/* AXN Mining Machine Title */}
+      <p className="text-center text-[10px] font-black uppercase tracking-[0.15em] text-white/30 mb-1">AXN Mining Machine</p>
 
-      {/* Level Labels Row — full width, no card */}
-      <div className="flex items-center justify-center gap-3 px-4 py-1 border-b border-white/[0.06]">
-        <div className="flex items-center gap-1.5">
-          <Activity className="w-3 h-3 text-[#F5C542]/70" />
-          <span className="text-[#F5C542]/60 text-[9px] font-bold uppercase tracking-wide">Mining</span>
-          <span className="text-[#F5C542] text-[9px] font-black tabular-nums">Lv.{state.miningLevel}</span>
-        </div>
-        <span className="text-white/10 text-xs">|</span>
-        <div className="flex items-center gap-1.5">
-          <HardDrive className="w-3 h-3 text-blue-400/70" />
-          <span className="text-blue-400/60 text-[9px] font-bold uppercase tracking-wide">Capacity</span>
-          <span className="text-blue-400 text-[9px] font-black tabular-nums">Lv.{state.capacityLevel}</span>
-        </div>
-        <span className="text-white/10 text-xs">|</span>
-        <div className="flex items-center gap-1.5">
-          <Cpu className="w-3 h-3 text-purple-400/70" />
-          <span className="text-purple-400/60 text-[9px] font-bold uppercase tracking-wide">CPU</span>
-          <span className="text-purple-400 text-[9px] font-black tabular-nums">Lv.{state.cpuLevel}</span>
-        </div>
-      </div>
+      <div className="bg-[#000000] border border-[#1c1c1e] rounded-2xl overflow-hidden">
 
-      {/* Matrix Terminal — full width */}
-      <div className="-mt-2">
-        <MiningTerminal
-        isMining={isMining}
-        miningRate={state.miningRate}
-        mined={localMined}
-        machineStopped={machineStopped}
-        noEnergy={noEnergy && !machineStopped}
-        />
-      </div>
-
-      {/* Content below terminal */}
-      <div className="px-4 pt-3 pb-4 space-y-3">
-
-        {/* Capacity Progress */}
-        <div>
-          <div className="flex justify-between items-center mb-1.5">
-            <div className="flex items-center gap-1.5">
-              <HardDrive className="w-3 h-3 text-[#F5C542]" />
-              <span className="text-white/50 text-[10px] font-bold uppercase tracking-wider">Capacity</span>
+        {/* Top: Antivirus Status Bar */}
+        <div className="flex items-center justify-between px-4 pt-3 pb-2 border-b border-[#1c1c1e]">
+          {state.antivirusActive ? (
+            <div className="flex items-center gap-2">
+              <Shield className="w-3.5 h-3.5 text-green-400" />
+              <span className="text-green-400 text-[11px] font-black uppercase tracking-wider">
+                Antivirus active — no threats detected
+              </span>
             </div>
-            <span className="text-white/60 text-[10px] font-black tabular-nums">
-              {localMined.toFixed(2)} / {state.capacity} AXN
-            </span>
-          </div>
-          <div className="h-2 bg-white/5 rounded-full overflow-hidden">
-            <motion.div
-              className="h-full rounded-full"
-              style={{ background: capacityPct > 90 ? '#ef4444' : 'linear-gradient(90deg,#F5C542,#d4920a)' }}
-              animate={{ width: `${capacityPct}%` }}
-              transition={{ duration: 0.5 }}
-            />
-          </div>
-        </div>
-
-        {/* Stats Row */}
-        <div className="grid grid-cols-3 gap-2.5">
-          <div className="flex flex-col items-center gap-0.5 py-2.5 rounded-2xl" style={{ background: 'rgba(255,255,255,0.04)' }}>
-            <Activity className="w-4 h-4 text-[#F5C542] mb-0.5" />
-            <p className="text-white text-xs font-black tabular-nums">{state.miningRate}/s</p>
-            <p className="text-white/30 text-[9px] uppercase tracking-wide">Rate</p>
-          </div>
-          <div className="flex flex-col items-center gap-0.5 py-2.5 rounded-2xl" style={{ background: 'rgba(255,255,255,0.04)' }}>
-            <Cpu className="w-4 h-4 text-blue-400 mb-0.5" />
-            <p className={`text-xs font-black tabular-nums ${state.cpuRunning ? 'text-blue-300' : 'text-white/40'}`}>
-              {state.cpuRunning ? formatTime(cpuCountdown) : 'Idle'}
-            </p>
-            <p className="text-white/30 text-[9px] uppercase tracking-wide">CPU</p>
-          </div>
-          <button
-            onClick={() => setRepairOpen(true)}
-            className="flex flex-col items-center gap-0.5 py-2.5 rounded-2xl active:scale-95 transition-transform"
-            style={{ background: 'rgba(255,255,255,0.04)' }}
-          >
-            <Wrench className="w-4 h-4 mb-0.5" style={{ color: healthColor }} />
-            <p className="text-xs font-black tabular-nums" style={{ color: healthColor }}>
-              {state.machineHealth}%
-            </p>
-            <p className="text-white/30 text-[9px] uppercase tracking-wide">Health</p>
-            <div className="mt-1 h-0.5 w-8 rounded-full bg-white/5 overflow-hidden">
-              <div
-                className="h-full rounded-full transition-all duration-500"
-                style={{ width: `${state.machineHealth}%`, background: healthColor }}
-              />
-            </div>
-          </button>
-        </div>
-
-        {/* Energy Bar */}
-        <div
-          className="flex items-center gap-3 rounded-2xl px-3 py-2.5 cursor-pointer active:scale-[0.99] transition-transform"
-          style={{ background: 'rgba(255,255,255,0.04)' }}
-          onClick={() => { if (!state.cpuRunning && !state.hasEnergy) setEnergyOpen(true); }}
-        >
-          <div className="flex items-center gap-2 flex-1">
-            <Zap
-              className="w-4 h-4 flex-shrink-0"
-              style={{ color: energyPct > 60 ? '#F5C542' : energyPct > 20 ? '#f59e0b' : energyPct > 0 ? '#ef4444' : 'rgba(255,255,255,0.15)' }}
-            />
-            <div className="flex-1">
-              <div className="flex justify-between items-center mb-1">
-                <span className="text-white/50 text-[10px] font-bold uppercase tracking-wider">Energy</span>
-                <span
-                  className="text-[10px] font-black tabular-nums"
-                  style={{ color: energyPct > 60 ? '#F5C542' : energyPct > 20 ? '#f59e0b' : energyPct > 0 ? '#ef4444' : '#f87171' }}
-                >
-                  {energyPct}%
-                </span>
-              </div>
-              <div className="h-1.5 bg-white/5 rounded-full overflow-hidden">
-                <motion.div
-                  className="h-full rounded-full"
-                  animate={{ width: `${energyPct}%` }}
-                  transition={{ duration: 0.8, ease: "linear" }}
-                  style={{
-                    background: energyPct > 60
-                      ? 'linear-gradient(90deg,#F5C542,#d4920a)'
-                      : energyPct > 20
-                      ? 'linear-gradient(90deg,#f59e0b,#d97706)'
-                      : energyPct > 0
-                      ? 'linear-gradient(90deg,#ef4444,#dc2626)'
-                      : 'rgba(239,68,68,0.3)',
-                  }}
-                />
-              </div>
-              <p className="text-white/25 text-[9px] mt-1">
-                {state.cpuRunning
-                  ? `⚡ Mining — ${energyPct}% remaining`
-                  : energyPct === 100
-                  ? '⚡ Full — Ready to mine'
-                  : '🪫 Empty — Tap to refill'}
-              </p>
-            </div>
-          </div>
-          {!state.cpuRunning && !state.hasEnergy && (
+          ) : (
             <button
-              onClick={(e) => { e.stopPropagation(); setEnergyOpen(true); }}
-              className="flex-shrink-0 h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider text-black active:scale-95 transition-all"
-              style={{ background: 'linear-gradient(135deg,#F5C542,#d4920a)' }}
+              onClick={() => setAntivirusOpen(true)}
+              className="flex items-center gap-2 active:scale-95 transition-transform"
             >
-              Refill
+              <ShieldOff className="w-3.5 h-3.5 text-red-400 animate-pulse" />
+              <span className="text-red-400 text-[11px] font-black uppercase tracking-wider">
+                Virus detected — machine at risk
+              </span>
             </button>
           )}
         </div>
 
-        {/* Virus Warning Banner — shown when AV is OFF and attack timer is running */}
-        <AnimatePresence>
-          {!state.antivirusActive && state.lastVirusAttack && (
-            <motion.div
-              key="virus-banner"
-              initial={{ opacity: 0, scaleY: 0.85, y: -6 }}
-              animate={{ opacity: 1, scaleY: 1, y: 0 }}
-              exit={{ opacity: 0, scaleY: 0.85, y: -6 }}
-              transition={{ type: "spring", damping: 22, stiffness: 300 }}
-              className="flex items-center justify-between px-3 py-2.5 rounded-2xl"
-              style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)' }}
-            >
-              <div className="flex items-center gap-2.5">
-                <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 animate-pulse" />
-                <div>
-                  <p className="text-red-400 text-[10px] font-black uppercase tracking-wider leading-tight">
-                    Virus Active
-                  </p>
-                  <p className="text-red-400/55 text-[9px] mt-0.5">
-                    {virusCountdown > 0
-                      ? `Steals −1 AXN in ${formatTime(virusCountdown)} · Health always decays`
-                      : '⚠ AXN theft imminent! · Health always decays'}
-                  </p>
-                </div>
+        {/* Level Labels Row — compact */}
+        <div className="flex items-center justify-center gap-3 px-4 py-2 border-b border-[#1c1c1e]">
+          <div className="flex items-center gap-1">
+            <Activity className="w-3 h-3 text-[#F5C542]/60" />
+            <span className="text-[#F5C542]/70 text-[10px] font-bold uppercase tracking-wide">Mining</span>
+            <span className="text-[#F5C542] text-[10px] font-black tabular-nums">Lv.{state.miningLevel}</span>
+          </div>
+          <span className="text-white/10 text-xs">|</span>
+          <div className="flex items-center gap-1">
+            <HardDrive className="w-3 h-3 text-blue-400/60" />
+            <span className="text-blue-400/70 text-[10px] font-bold uppercase tracking-wide">Capacity</span>
+            <span className="text-blue-400 text-[10px] font-black tabular-nums">Lv.{state.capacityLevel}</span>
+          </div>
+          <span className="text-white/10 text-xs">|</span>
+          <div className="flex items-center gap-1">
+            <Cpu className="w-3 h-3 text-purple-400/60" />
+            <span className="text-purple-400/70 text-[10px] font-bold uppercase tracking-wide">CPU</span>
+            <span className="text-purple-400 text-[10px] font-black tabular-nums">Lv.{state.cpuLevel}</span>
+          </div>
+        </div>
+
+        {/* Matrix Terminal Log Display */}
+        <div className="px-3 pt-3 pb-2">
+          <MiningTerminal
+            isMining={isMining}
+            miningRate={state.miningRate}
+            mined={localMined}
+            machineStopped={machineStopped}
+          />
+        </div>
+
+        <div className="border-t border-[#1c1c1e] mx-4" />
+
+        <div className="px-4 py-4">
+
+          {/* Capacity Progress */}
+          <div className="mb-4">
+            <div className="flex justify-between items-center mb-1.5">
+              <div className="flex items-center gap-1.5">
+                <HardDrive className="w-3 h-3 text-[#F5C542]" />
+                <span className="text-white/50 text-[10px] font-bold uppercase tracking-wider">Capacity</span>
               </div>
+              <span className="text-white/60 text-[10px] font-black tabular-nums">
+                {localMined.toFixed(2)} / {state.capacity} AXN
+              </span>
+            </div>
+            <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+              <motion.div
+                className="h-full rounded-full"
+                style={{ background: capacityPct > 90 ? '#ef4444' : 'linear-gradient(90deg,#F5C542,#d4920a)' }}
+                animate={{ width: `${capacityPct}%` }}
+                transition={{ duration: 0.5 }}
+              />
+            </div>
+          </div>
+
+          {/* Stats Row */}
+          <div className="grid grid-cols-3 gap-2 mb-4">
+            <div className="bg-[#1c1c1e] rounded-xl p-2.5 text-center">
+              <Activity className="w-3.5 h-3.5 text-[#F5C542] mx-auto mb-1" />
+              <p className="text-white text-xs font-black tabular-nums">{state.miningRate}/s</p>
+              <p className="text-white/30 text-[9px] uppercase tracking-wide mt-0.5">Rate</p>
+            </div>
+            <div className="bg-[#1c1c1e] rounded-xl p-2.5 text-center">
+              <Cpu className="w-3.5 h-3.5 text-blue-400 mx-auto mb-1" />
+              <p className={`text-xs font-black tabular-nums ${state.cpuRunning ? 'text-blue-300' : 'text-white/40'}`}>
+                {state.cpuRunning ? formatTime(cpuCountdown) : 'Idle'}
+              </p>
+              <p className="text-white/30 text-[9px] uppercase tracking-wide mt-0.5">CPU</p>
+            </div>
+            <div className="bg-[#1c1c1e] rounded-xl p-2.5 text-center">
+              <Wrench className="w-3.5 h-3.5 mx-auto mb-1" style={{ color: healthColor }} />
+              <p className="text-xs font-black tabular-nums" style={{ color: healthColor }}>
+                {state.machineHealth}%
+              </p>
+              <p className="text-white/30 text-[9px] uppercase tracking-wide mt-0.5">Health</p>
+              <div className="mt-1.5 h-1 rounded-full bg-white/5 overflow-hidden">
+                <div
+                  className="h-full rounded-full transition-all duration-500"
+                  style={{ width: `${state.machineHealth}%`, background: healthColor }}
+                />
+              </div>
+            </div>
+          </div>
+
+          {/* Energy Bar */}
+          <div className="flex items-center gap-3 bg-[#1c1c1e] rounded-xl px-3 py-2.5 mb-4">
+            <div className="flex items-center gap-1.5 flex-1">
+              <Zap
+                className="w-3.5 h-3.5 flex-shrink-0"
+                style={{ color: energyPct > 60 ? '#F5C542' : energyPct > 20 ? '#f59e0b' : energyPct > 0 ? '#ef4444' : 'rgba(255,255,255,0.15)' }}
+              />
+              <div className="flex-1">
+                <div className="flex justify-between items-center mb-1">
+                  <span className="text-white/50 text-[10px] font-bold uppercase tracking-wider">Energy</span>
+                  <span
+                    className="text-[10px] font-black tabular-nums"
+                    style={{ color: energyPct > 60 ? '#F5C542' : energyPct > 20 ? '#f59e0b' : energyPct > 0 ? '#ef4444' : '#f87171' }}
+                  >
+                    {energyPct}%
+                  </span>
+                </div>
+                <div className="h-2 bg-white/5 rounded-full overflow-hidden">
+                  <motion.div
+                    className="h-full rounded-full"
+                    animate={{ width: `${energyPct}%` }}
+                    transition={{ duration: 0.8, ease: "linear" }}
+                    style={{
+                      background: energyPct > 60
+                        ? 'linear-gradient(90deg,#F5C542,#d4920a)'
+                        : energyPct > 20
+                        ? 'linear-gradient(90deg,#f59e0b,#d97706)'
+                        : energyPct > 0
+                        ? 'linear-gradient(90deg,#ef4444,#dc2626)'
+                        : 'rgba(239,68,68,0.3)',
+                    }}
+                  />
+                </div>
+                <p className="text-white/25 text-[9px] mt-1">
+                  {state.cpuRunning
+                    ? `⚡ Mining — ${energyPct}% remaining`
+                    : energyPct === 100
+                    ? '⚡ Full — Ready to mine'
+                    : '🪫 Empty — Refill to continue'}
+                </p>
+              </div>
+            </div>
+            {!state.cpuRunning && !state.hasEnergy && (
+              <button
+                onClick={() => refillMutation.mutate()}
+                disabled={refillMutation.isPending}
+                className="flex-shrink-0 h-7 px-3 rounded-lg text-[10px] font-black uppercase tracking-wider text-black active:scale-95 transition-all disabled:opacity-50"
+                style={{ background: 'linear-gradient(135deg,#F5C542,#d4920a)' }}
+              >
+                {refillMutation.isPending ? <Loader2 className="w-3 h-3 animate-spin" /> : `+${state.energyCost} AXN`}
+              </button>
+            )}
+          </div>
+
+          {/* Action Buttons */}
+          <div className="space-y-2">
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => startCpuMutation.mutate()}
+                disabled={
+                  startCpuMutation.isPending ||
+                  state.cpuRunning ||
+                  !state.hasEnergy ||
+                  state.machineHealth <= 0
+                }
+                className="h-11 rounded-xl flex items-center justify-center gap-1.5 font-black text-xs uppercase tracking-widest transition-all active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
+                style={
+                  !state.cpuRunning && state.hasEnergy && state.machineHealth > 0
+                    ? { background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: '#fff', boxShadow: '0 0 14px rgba(59,130,246,0.3)' }
+                    : { background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.25)' }
+                }
+              >
+                {startCpuMutation.isPending ? (
+                  <Loader2 className="w-3.5 h-3.5 animate-spin" />
+                ) : state.cpuRunning ? (
+                  <><Cpu className="w-3.5 h-3.5" /> Running</>
+                ) : (
+                  <><Play className="w-3.5 h-3.5" /> Start Mining</>
+                )}
+              </button>
+
+              <button
+                onClick={() => claimMutation.mutate()}
+                disabled={claimMutation.isPending || !canClaim}
+                className="h-11 rounded-xl flex items-center justify-center gap-1.5 font-black text-xs uppercase tracking-widest transition-all active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
+                style={canClaim ? {
+                  background: 'linear-gradient(135deg,#F5C542,#d4920a)',
+                  color: '#000',
+                  boxShadow: '0 0 14px rgba(245,197,66,0.3)',
+                } : {
+                  background: '#1c1c1e',
+                  border: '1px solid rgba(255,255,255,0.08)',
+                  color: 'rgba(255,255,255,0.25)',
+                }}
+              >
+                {claimMutation.isPending ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : '⬇ Collect AXN'}
+              </button>
+            </div>
+
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setRepairOpen(true)}
+                className="h-10 rounded-xl flex items-center justify-center gap-1.5 font-black text-[11px] uppercase tracking-widest transition-all active:scale-[0.97]"
+                style={{ background: '#1c1c1e', border: '1px solid rgba(255,255,255,0.06)', color: 'rgba(255,255,255,0.5)' }}
+              >
+                <Wrench className="w-3.5 h-3.5" /> Repair
+              </button>
               <button
                 onClick={() => setAntivirusOpen(true)}
-                className="flex-shrink-0 h-7 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all"
-                style={{ background: 'rgba(239,68,68,0.22)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5' }}
+                className="h-10 rounded-xl flex items-center justify-center gap-1.5 font-black text-[11px] uppercase tracking-widest transition-all active:scale-[0.97]"
+                style={state.antivirusActive
+                  ? { background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)', color: '#22c55e' }
+                  : { background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.2)', color: '#ef4444' }
+                }
               >
-                Protect
+                <Shield className="w-3.5 h-3.5" /> Antivirus
               </button>
-            </motion.div>
-          )}
-        </AnimatePresence>
-
-        {/* Primary Action Buttons */}
-        <div className="grid grid-cols-2 gap-2.5">
-          <button
-            onClick={() => {
-              if (!state.hasEnergy && !state.cpuRunning && state.machineHealth > 0) {
-                setEnergyOpen(true);
-                return;
-              }
-              startCpuMutation.mutate();
-            }}
-            disabled={
-              startCpuMutation.isPending ||
-              state.cpuRunning ||
-              state.machineHealth <= 0
-            }
-            className="h-12 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest transition-all active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
-            style={
-              !state.cpuRunning && state.machineHealth > 0
-                ? state.hasEnergy
-                  ? { background: 'linear-gradient(135deg,#3b82f6,#1d4ed8)', color: '#fff', boxShadow: '0 0 18px rgba(59,130,246,0.3)' }
-                  : { background: 'linear-gradient(135deg,#F5C542,#d4920a)', color: '#000' }
-                : { background: 'rgba(255,255,255,0.05)', border: '1px solid rgba(255,255,255,0.08)', color: 'rgba(255,255,255,0.25)' }
-            }
-          >
-            {startCpuMutation.isPending ? (
-              <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            ) : state.cpuRunning ? (
-              <><Cpu className="w-4 h-4" /> Running</>
-            ) : !state.hasEnergy && state.machineHealth > 0 ? (
-              <><Zap className="w-4 h-4" /> Refill Energy</>
-            ) : (
-              <><Play className="w-4 h-4" /> Start Mining</>
-            )}
-          </button>
-
-          <button
-            onClick={() => claimMutation.mutate()}
-            disabled={claimMutation.isPending || !canClaim}
-            className="h-12 rounded-2xl flex items-center justify-center gap-2 font-black text-xs uppercase tracking-widest transition-all active:scale-[0.97] disabled:opacity-40 disabled:cursor-not-allowed"
-            style={canClaim ? {
-              background: 'linear-gradient(135deg,#F5C542,#d4920a)',
-              color: '#000',
-              boxShadow: '0 0 18px rgba(245,197,66,0.3)',
-            } : {
-              background: 'rgba(255,255,255,0.05)',
-              border: '1px solid rgba(255,255,255,0.08)',
-              color: 'rgba(255,255,255,0.25)',
-            }}
-          >
-            {claimMutation.isPending ? (
-              <span className="w-3.5 h-3.5 border-2 border-current border-t-transparent rounded-full animate-spin" />
-            ) : (
-              '⬇ Collect AXN'
-            )}
-          </button>
+            </div>
+          </div>
         </div>
-
-        {/* Secondary: Repair / Antivirus / Upgrade — clean floating icons, no box */}
-        <div className="flex items-center justify-around pt-1 pb-0.5">
-          <button
-            onClick={() => setRepairOpen(true)}
-            className="flex flex-col items-center gap-1.5 px-5 py-2 active:scale-90 transition-transform"
-          >
-            <Wrench className="w-5 h-5 text-white/40" />
-            <span className="text-white/40 text-[10px] font-bold uppercase tracking-wide">Repair</span>
-          </button>
-
-          <button
-            onClick={() => setAntivirusOpen(true)}
-            className="flex flex-col items-center gap-1.5 px-5 py-2 active:scale-90 transition-transform"
-          >
-            {state.antivirusActive ? (
-              <Shield className="w-5 h-5 text-green-400" />
-            ) : (
-              <ShieldOff className="w-5 h-5 text-red-400/70 animate-pulse" />
-            )}
-            <span
-              className="text-[10px] font-bold uppercase tracking-wide"
-              style={{ color: state.antivirusActive ? '#22c55e' : 'rgba(239,68,68,0.6)' }}
-            >
-              {state.antivirusActive ? 'Protected' : 'AV Off'}
-            </span>
-          </button>
-
-          <button
-            onClick={() => setUpgradeOpen(true)}
-            className="flex flex-col items-center gap-1.5 px-5 py-2 active:scale-90 transition-transform"
-          >
-            <Settings className="w-5 h-5 text-[#F5C542]/70" />
-            <span className="text-[10px] font-bold uppercase tracking-wide text-[#F5C542]/70">Upgrade</span>
-          </button>
-        </div>
-
       </div>
 
       {repairOpen && (
@@ -662,18 +579,7 @@ export default function MiningMachinePanel() {
           antivirusCost={state.antivirusCost}
           antivirusActive={state.antivirusActive}
           balance={state.balance}
-          miningLevel={Math.min(state.miningLevel, state.capacityLevel, state.cpuLevel)}
           onClose={() => setAntivirusOpen(false)}
-        />
-      )}
-      {upgradeOpen && (
-        <UpgradeMachinePopup onClose={() => setUpgradeOpen(false)} />
-      )}
-      {energyOpen && (
-        <EnergyPopup
-          energyCost={state.energyCost}
-          balance={state.balance}
-          onClose={() => setEnergyOpen(false)}
         />
       )}
     </div>
