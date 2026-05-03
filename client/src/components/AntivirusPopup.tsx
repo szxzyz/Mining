@@ -8,7 +8,13 @@ import { apiRequest } from "@/lib/queryClient";
 const FREE_COOLDOWN_KEY = "antivirus_free_used_at";
 const AV_ACTIVE_KEY = "av_activated_at";
 const COOLDOWN_MS = 35 * 60 * 1000;
-export const AV_DURATION_MS = 20 * 60 * 1000;
+
+export function getAvDurationMs(avLevel: number): number {
+  const level = Math.max(1, Math.min(25, avLevel || 1));
+  return (level * 10 + 10) * 60 * 1000;
+}
+
+export const AV_DURATION_MS = getAvDurationMs(1);
 
 function getRemainingCooldown(): number {
   const stored = localStorage.getItem(FREE_COOLDOWN_KEY);
@@ -23,17 +29,31 @@ function formatCooldown(secs: number): string {
   return `${m}:${s.toString().padStart(2, "0")}`;
 }
 
+function formatDurationMinutes(ms: number): string {
+  const min = Math.round(ms / 60000);
+  if (min >= 60) {
+    const h = Math.floor(min / 60);
+    const m = min % 60;
+    return m > 0 ? `${h}h ${m}m` : `${h}h`;
+  }
+  return `${min} minutes`;
+}
+
 interface AntivirusPopupProps {
   antivirusCost: number;
   antivirusActive: boolean;
   balance: number;
+  miningLevel: number;
   onClose: () => void;
 }
 
-export default function AntivirusPopup({ antivirusCost, antivirusActive, balance, onClose }: AntivirusPopupProps) {
+export default function AntivirusPopup({ antivirusCost, antivirusActive, balance, miningLevel, onClose }: AntivirusPopupProps) {
   const queryClient = useQueryClient();
   const [cooldown, setCooldown] = useState(getRemainingCooldown);
   const [adWatching, setAdWatching] = useState(false);
+
+  const avDurationMs = getAvDurationMs(miningLevel);
+  const durationLabel = formatDurationMinutes(avDurationMs);
 
   useEffect(() => {
     if (cooldown <= 0) return;
@@ -55,7 +75,7 @@ export default function AntivirusPopup({ antivirusCost, antivirusActive, balance
     onSuccess: (d) => {
       if (d.active) {
         localStorage.setItem(AV_ACTIVE_KEY, String(Date.now()));
-        showNotification("Antivirus activated for 20 minutes!", "success");
+        showNotification(`Antivirus activated for ${durationLabel}!`, "success");
       } else {
         localStorage.removeItem(AV_ACTIVE_KEY);
         showNotification("Antivirus deactivated.", "info");
@@ -72,7 +92,7 @@ export default function AntivirusPopup({ antivirusCost, antivirusActive, balance
       localStorage.setItem(AV_ACTIVE_KEY, String(Date.now()));
       localStorage.setItem(FREE_COOLDOWN_KEY, String(Date.now()));
       setCooldown(COOLDOWN_MS / 1000);
-      showNotification("Antivirus activated for 20 minutes! (Free)", "success");
+      showNotification(`Antivirus activated for ${durationLabel}! (Free)`, "success");
       invalidate();
       onClose();
     },
@@ -118,9 +138,7 @@ export default function AntivirusPopup({ antivirusCost, antivirusActive, balance
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-[#1c1c1e]">
-            <div className="w-9 h-9 rounded-2xl bg-green-500/15 flex items-center justify-center flex-shrink-0">
-              <Shield className="w-4 h-4 text-green-400" />
-            </div>
+            <Shield className="w-5 h-5 text-green-400 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-white font-black text-sm uppercase tracking-wider">Antivirus</p>
               <p className="text-white/35 text-[11px] mt-0.5">Protects your AXN balance from virus attacks</p>
@@ -144,13 +162,25 @@ export default function AntivirusPopup({ antivirusCost, antivirusActive, balance
               )}
             </div>
 
-            {/* Duration row */}
+            {/* Duration row — level-based on min of all 3 machine levels */}
             <div className="bg-[#141414] border border-white/5 rounded-2xl px-4 py-3 flex items-center justify-between">
               <div className="flex items-center gap-2">
                 <Clock className="w-3.5 h-3.5 text-white/25" />
                 <span className="text-white/40 text-xs">Protection Duration</span>
               </div>
-              <span className="text-white font-black text-sm">20 minutes</span>
+              <div className="flex items-center gap-2">
+                <span className="text-white font-black text-sm">{durationLabel}</span>
+                <span className="text-[9px] font-black px-1.5 py-0.5 rounded-md uppercase tracking-wide text-[#F5C542] bg-[#F5C542]/10">
+                  AV Lv.{miningLevel}
+                </span>
+              </div>
+            </div>
+
+            {/* Level upgrade hint */}
+            <div className="bg-[#141414] border border-white/5 rounded-2xl px-4 py-3">
+              <p className="text-white/30 text-[11px] leading-relaxed">
+                Antivirus level = <span className="text-white/50">lowest level among Mining, Capacity & CPU.</span> Upgrade all three equally to increase duration by +10 min per level.
+              </p>
             </div>
 
             {/* Info note */}

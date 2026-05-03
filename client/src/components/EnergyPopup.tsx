@@ -114,9 +114,7 @@ export default function EnergyPopup({ energyCost, balance, onClose }: EnergyPopu
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-[#1c1c1e]">
-            <div className="w-9 h-9 rounded-2xl bg-[#F5C542]/15 flex items-center justify-center flex-shrink-0">
-              <Zap className="w-4 h-4 text-[#F5C542]" />
-            </div>
+            <Zap className="w-5 h-5 text-[#F5C542] flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-white font-black text-sm uppercase tracking-wider">Energy Refill</p>
               <p className="text-white/35 text-[11px] mt-0.5">Refill energy to continue mining operations</p>

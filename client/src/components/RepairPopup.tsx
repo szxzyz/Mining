@@ -107,9 +107,7 @@ export default function RepairPopup({ repairCost, machineHealth, balance, onClos
         >
           {/* Header */}
           <div className="flex items-center gap-3 px-5 pt-5 pb-4 border-b border-[#1c1c1e]">
-            <div className="w-9 h-9 rounded-2xl bg-orange-500/15 flex items-center justify-center flex-shrink-0">
-              <Wrench className="w-4 h-4 text-orange-400" />
-            </div>
+            <Wrench className="w-5 h-5 text-orange-400 flex-shrink-0" />
             <div className="flex-1 min-w-0">
               <p className="text-white font-black text-sm uppercase tracking-wider">Repair Machine</p>
               <p className="text-white/35 text-[11px] mt-0.5">Restore machine health to 100%</p>
