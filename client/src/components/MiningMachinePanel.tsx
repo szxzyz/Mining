@@ -35,6 +35,7 @@ interface MachineState {
   balance: number;
   pendingVirusDamage: number;
   nextVirusIn: number;
+  lastVirusAttack: string | null;
 }
 
 const AV_ACTIVE_KEY = "av_activated_at";
@@ -239,6 +240,39 @@ export default function MiningMachinePanel() {
   }, [state?.cpuRunning, state?.miningRate, state?.capacity, state?.machineHealth]);
 
   const avIntervalRef = useRef<ReturnType<typeof setInterval> | null>(null);
+
+  // ── Virus attack tracking ──────────────────────────────────────
+  const prevVirusDamageRef = useRef<number>(0);
+  const [virusCountdown, setVirusCountdown] = useState(0);
+
+  // Detect new virus attacks and fire a notification
+  useEffect(() => {
+    if (!state) return;
+    const prev = prevVirusDamageRef.current;
+    const curr = state.pendingVirusDamage;
+    if (curr > prev && prev >= 0) {
+      const hit = curr - prev;
+      showNotification(`🦠 Virus stole ${hit} AXN from your balance! Activate antivirus to stop theft.`, "error");
+    }
+    prevVirusDamageRef.current = curr;
+  }, [state?.pendingVirusDamage]);
+
+  // Sync virus countdown from server on every poll
+  useEffect(() => {
+    if (!state || state.antivirusActive) {
+      setVirusCountdown(0);
+      return;
+    }
+    setVirusCountdown(state.nextVirusIn);
+  }, [state?.nextVirusIn, state?.antivirusActive]);
+
+  // Tick down virus countdown locally between polls
+  useEffect(() => {
+    if (virusCountdown <= 0) return;
+    const t = setInterval(() => setVirusCountdown(p => Math.max(0, p - 1)), 1000);
+    return () => clearInterval(t);
+  }, [virusCountdown > 0]);
+  // ──────────────────────────────────────────────────────────────
 
   const antivirusDeactivateMutation = useMutation({
     mutationFn: () => apiRequest("POST", "/api/axn-mining/toggle-antivirus").then(r => r.json()),
@@ -474,6 +508,42 @@ export default function MiningMachinePanel() {
             </button>
           )}
         </div>
+
+        {/* Virus Warning Banner — shown when AV is OFF and attack timer is running */}
+        <AnimatePresence>
+          {!state.antivirusActive && state.lastVirusAttack && (
+            <motion.div
+              key="virus-banner"
+              initial={{ opacity: 0, scaleY: 0.85, y: -6 }}
+              animate={{ opacity: 1, scaleY: 1, y: 0 }}
+              exit={{ opacity: 0, scaleY: 0.85, y: -6 }}
+              transition={{ type: "spring", damping: 22, stiffness: 300 }}
+              className="flex items-center justify-between px-3 py-2.5 rounded-2xl"
+              style={{ background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.22)' }}
+            >
+              <div className="flex items-center gap-2.5">
+                <AlertTriangle className="w-4 h-4 text-red-400 flex-shrink-0 animate-pulse" />
+                <div>
+                  <p className="text-red-400 text-[10px] font-black uppercase tracking-wider leading-tight">
+                    Virus Active
+                  </p>
+                  <p className="text-red-400/55 text-[9px] mt-0.5">
+                    {virusCountdown > 0
+                      ? `Steals −1 AXN in ${formatTime(virusCountdown)} · Health always decays`
+                      : '⚠ AXN theft imminent! · Health always decays'}
+                  </p>
+                </div>
+              </div>
+              <button
+                onClick={() => setAntivirusOpen(true)}
+                className="flex-shrink-0 h-7 px-3 rounded-xl text-[10px] font-black uppercase tracking-wider active:scale-95 transition-all"
+                style={{ background: 'rgba(239,68,68,0.22)', border: '1px solid rgba(239,68,68,0.35)', color: '#fca5a5' }}
+              >
+                Protect
+              </button>
+            </motion.div>
+          )}
+        </AnimatePresence>
 
         {/* Primary Action Buttons */}
         <div className="grid grid-cols-2 gap-2.5">
