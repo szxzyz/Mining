@@ -739,6 +739,12 @@ export async function ensureDatabaseSchema(): Promise<void> {
     `);
     console.log('✅ [MIGRATION] user_machines table created');
 
+    // Add last_health_decay column if missing (health degrades always, separate from AXN theft)
+    await db.execute(sql`
+      ALTER TABLE user_machines ADD COLUMN IF NOT EXISTS last_health_decay TIMESTAMP
+    `);
+    console.log('✅ [MIGRATION] last_health_decay column ensured on user_machines');
+
     console.log('✅ [MIGRATION] All tables and indexes created successfully');
     
   } catch (error) {

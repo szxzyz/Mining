@@ -581,6 +581,7 @@ export class DatabaseStorage implements IStorage {
       machineHealth: 100,
       lastClaimTime: now,
       lastVirusAttack: now,
+      lastHealthDecay: now,
     }).returning();
     return created;
   }
@@ -617,13 +618,15 @@ export class DatabaseStorage implements IStorage {
       }
     }
 
-    // Compute pending virus damage (displayed to UI, not yet applied)
+    const ATTACK_INTERVAL = 300; // 5 minutes
+
+    // AXN theft countdown — only relevant when AV is OFF
     let virusDamage = 0;
-    let nextVirusIn = 120; // seconds until next virus attack
+    let nextVirusIn = ATTACK_INTERVAL;
     if (!machine.antivirusActive && machine.lastVirusAttack) {
       const secSinceAttack = Math.floor((now.getTime() - machine.lastVirusAttack.getTime()) / 1000);
-      virusDamage = Math.floor(secSinceAttack / 120);
-      nextVirusIn = 120 - (secSinceAttack % 120);
+      virusDamage = Math.floor(secSinceAttack / ATTACK_INTERVAL);
+      nextVirusIn = ATTACK_INTERVAL - (secSinceAttack % ATTACK_INTERVAL);
     }
 
     const balance = parseFloat(user?.balance || '0');
@@ -868,42 +871,62 @@ export class DatabaseStorage implements IStorage {
 
   async applyVirusDamage(userId: string): Promise<void> {
     const machine = await this.getOrCreateMachine(userId);
-    if (machine.antivirusActive) return;
-
     const now = new Date();
+    const ATTACK_INTERVAL = 300; // 5 minutes
 
-    // If timer was never started, set it now and return (first exposure)
-    if (!machine.lastVirusAttack) {
-      await db.update(userMachines).set({ lastVirusAttack: now, updatedAt: now })
-        .where(eq(userMachines.userId, userId));
-      return;
+    const machineUpdates: Record<string, any> = { updatedAt: now };
+    let axnDamage = 0;
+
+    // ── HEALTH DECAY — always, every 5 min regardless of antivirus ──
+    if (!machine.lastHealthDecay) {
+      // First time — just start the timer
+      machineUpdates.lastHealthDecay = now;
+    } else {
+      const secSinceDecay = Math.floor((now.getTime() - machine.lastHealthDecay.getTime()) / 1000);
+      const decayTicks = Math.floor(secSinceDecay / ATTACK_INTERVAL);
+      if (decayTicks > 0) {
+        const healthLoss = Math.min(machine.machineHealth, decayTicks * 5);
+        machineUpdates.machineHealth = Math.max(0, machine.machineHealth - healthLoss);
+        machineUpdates.lastHealthDecay = now;
+      }
     }
 
-    const lastAttack = machine.lastVirusAttack;
-    const secSince = Math.floor((now.getTime() - lastAttack.getTime()) / 1000);
-    const attacks = Math.floor(secSince / 120); // 1 attack per 2 minutes
-    if (attacks <= 0) return;
-
-    const damage = attacks; // 1 AXN per attack
-    const healthDamage = Math.min(machine.machineHealth, attacks * 5); // 5 health per attack
-
-    const user = await this.getUser(userId);
-    const balance = parseFloat(user?.balance || '0');
-    const actualDamage = Math.min(damage, balance);
-
-    await db.transaction(async (tx) => {
-      if (actualDamage > 0) {
-        await tx.update(users).set({
-          balance: sql`GREATEST(0, COALESCE(${users.balance}, 0) - ${actualDamage.toString()})`,
-          updatedAt: now,
-        }).where(eq(users.id, userId));
+    // ── AXN THEFT — only when antivirus is OFF, every 5 min ──
+    if (!machine.antivirusActive) {
+      if (!machine.lastVirusAttack) {
+        // Start AXN theft timer
+        machineUpdates.lastVirusAttack = now;
+      } else {
+        const secSinceAttack = Math.floor((now.getTime() - machine.lastVirusAttack.getTime()) / 1000);
+        const attacks = Math.floor(secSinceAttack / ATTACK_INTERVAL);
+        if (attacks > 0) {
+          axnDamage = attacks; // 1 AXN per 5-min cycle
+          machineUpdates.lastVirusAttack = now;
+        }
       }
-      await tx.update(userMachines).set({
-        machineHealth: Math.max(0, machine.machineHealth - healthDamage),
-        lastVirusAttack: now,
-        updatedAt: now,
-      }).where(eq(userMachines.userId, userId));
-    });
+    }
+
+    // Skip DB write if nothing changed
+    const hasHealthChange = 'machineHealth' in machineUpdates || 'lastHealthDecay' in machineUpdates;
+    const hasVirusChange = 'lastVirusAttack' in machineUpdates;
+    if (!hasHealthChange && !hasVirusChange && axnDamage === 0) return;
+
+    if (axnDamage > 0) {
+      const user = await this.getUser(userId);
+      const balance = parseFloat(user?.balance || '0');
+      const actualDamage = Math.min(axnDamage, balance);
+      await db.transaction(async (tx) => {
+        if (actualDamage > 0) {
+          await tx.update(users).set({
+            balance: sql`GREATEST(0, COALESCE(${users.balance}, 0) - ${actualDamage.toString()})`,
+            updatedAt: now,
+          }).where(eq(users.id, userId));
+        }
+        await tx.update(userMachines).set(machineUpdates).where(eq(userMachines.userId, userId));
+      });
+    } else {
+      await db.update(userMachines).set(machineUpdates).where(eq(userMachines.userId, userId));
+    }
   }
 
   // Transaction operations
